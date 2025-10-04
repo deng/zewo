@@ -30,7 +30,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
+
+  # UI and state management
+  provider: ^6.0.5
+
   # Local wallet package
   wallet:
     path: ../wallet
