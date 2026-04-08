@@ -1,0 +1,1046 @@
+import 'package:wallet/src/core/balance_sync_service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:wallet/wallet.dart';
+import 'package:zero/main.dart' as app;
+
+const String kValidImportMnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+const String kSecondValidImportMnemonic =
+    'legal winner thank year wave sausage worth useful legal winner thank yellow';
+const String kInvalidChecksumMnemonic =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon';
+const String kValidAptTransferAddress =
+    '0x1111111111111111111111111111111111111111111111111111111111111111';
+const MethodChannel kToastChannel = MethodChannel('PonnamKarthik/fluttertoast');
+const String kUrlLauncherIosLaunchChannelName =
+    'dev.flutter.pigeon.url_launcher_ios.UrlLauncherApi.launchUrl';
+
+enum _UrlLauncherIosLaunchResult { success, failure, invalidUrl }
+
+class _UrlLauncherIosPigeonCodec extends StandardMessageCodec {
+  const _UrlLauncherIosPigeonCodec();
+
+  @override
+  void writeValue(WriteBuffer buffer, Object? value) {
+    if (value is _UrlLauncherIosLaunchResult) {
+      buffer.putUint8(129);
+      writeValue(buffer, value.index);
+      return;
+    }
+    super.writeValue(buffer, value);
+  }
+
+  @override
+  Object? readValueOfType(int type, ReadBuffer buffer) {
+    switch (type) {
+      case 129:
+        final value = readValue(buffer) as int?;
+        return value == null ? null : _UrlLauncherIosLaunchResult.values[value];
+      default:
+        return super.readValueOfType(type, buffer);
+    }
+  }
+}
+
+const MessageCodec<Object?> kUrlLauncherIosPigeonCodec =
+    _UrlLauncherIosPigeonCodec();
+
+void configureIntegrationTest() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    await SecureStorageService.clearAll();
+  });
+
+  tearDownAll(() async {
+    await SecureStorageService.clearAll();
+  });
+}
+
+Future<void> launchTestApp() async {
+  await app.bootstrapZeroWalletApp();
+}
+
+Future<void> pumpUntilVisible(
+  WidgetTester tester,
+  Finder finder, {
+  Duration timeout = const Duration(seconds: 20),
+  Duration step = const Duration(milliseconds: 200),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await tester.pump(step);
+    if (finder.evaluate().isNotEmpty) {
+      return;
+    }
+  }
+
+  throw TestFailure('Timed out waiting for $finder to become visible');
+}
+
+Future<void> tapAndPump(
+  WidgetTester tester,
+  Finder finder, {
+  Duration settle = const Duration(milliseconds: 600),
+}) async {
+  expect(finder, findsOneWidget);
+  await tester.ensureVisible(finder);
+  await tester.pump(const Duration(milliseconds: 200));
+  await tester.tap(finder);
+  await tester.pump(settle);
+}
+
+Future<void> unfocusAndPump(
+  WidgetTester tester, {
+  Duration settle = const Duration(milliseconds: 300),
+}) async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pump(settle);
+}
+
+Future<void> pumpUntilWalletHomeReady(
+  WidgetTester tester, {
+  String? walletName,
+}) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('wallet_home_selector_button')),
+  );
+  await pumpUntilVisible(tester, find.byKey(const Key('bottom_nav_home')));
+  if (walletName != null) {
+    await pumpUntilVisible(tester, find.text(walletName));
+  }
+}
+
+Future<void> waitForCurrentWalletBalanceGreaterThanZero(
+  WidgetTester tester, {
+  Duration timeout = const Duration(seconds: 30),
+  Duration step = const Duration(seconds: 1),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    final provider = WalletProvider.getInstance();
+    final wallet = provider?.currentWallet;
+    if (provider != null && wallet != null) {
+      await BalanceSyncService.instance.syncWallet(wallet.id);
+      final balanceText = await provider.getWalletTotalBalance(wallet.id);
+      final balanceValue = double.tryParse(balanceText ?? '');
+      if (balanceValue != null && balanceValue > 0) {
+        return;
+      }
+    }
+    await tester.pump(step);
+  }
+
+  throw TestFailure('Timed out waiting for current wallet balance to sync');
+}
+
+Future<String> waitForCurrentWalletNativeAssetBalanceGreaterThanZero(
+  WidgetTester tester, {
+  required String symbol,
+  Duration timeout = const Duration(seconds: 30),
+  Duration step = const Duration(seconds: 1),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    final provider = WalletProvider.getInstance();
+    final wallet = provider?.currentWallet;
+    if (provider != null && wallet != null) {
+      await BalanceSyncService.instance.syncWallet(wallet.id);
+      dynamic asset;
+      for (final candidate in provider.getWalletTokenAssets(wallet.id)) {
+        if (candidate.symbol == symbol &&
+            candidate.chainId == wallet.chainId &&
+            candidate.isNative == true) {
+          asset = candidate;
+          break;
+        }
+      }
+      final balanceValue = double.tryParse(asset?.balance ?? '');
+      if (asset != null && balanceValue != null && balanceValue > 0) {
+        return asset.balance;
+      }
+    }
+    await tester.pump(step);
+  }
+
+  throw TestFailure(
+    'Timed out waiting for current wallet native asset $symbol balance to sync',
+  );
+}
+
+Future<void> expectTextVisible(WidgetTester tester, String text) async {
+  await pumpUntilVisible(tester, find.text(text));
+  expect(find.text(text), findsOneWidget);
+}
+
+Future<void> expectWalletHome(
+  WidgetTester tester, {
+  required String walletName,
+}) async {
+  await pumpUntilWalletHomeReady(tester, walletName: walletName);
+  expect(find.text('钱包'), findsOneWidget);
+  expect(find.text('资产'), findsOneWidget);
+}
+
+Future<void> expectCreateWalletPageVisible(WidgetTester tester) async {
+  await expectTextVisible(tester, '创建钱包');
+}
+
+Future<void> openReceiveFromWalletHome(WidgetTester tester) async {
+  await tapAndPump(tester, find.byKey(const Key('wallet_home_receive_button')));
+}
+
+Future<void> openTransferFromWalletHome(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('wallet_home_transfer_button')),
+  );
+}
+
+Future<void> openWalletDetailFromHome(WidgetTester tester) async {
+  await tapAndPump(tester, find.byKey(const Key('wallet_home_detail_button')));
+}
+
+Future<void> openHdManageFromWalletDetail(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('wallet_detail_hd_manage_button')),
+  );
+}
+
+Future<void> openBackupMnemonicFromHdManage(WidgetTester tester) async {
+  await tapAndPump(tester, find.byKey(const Key('backup_mnemonic_menu_item')));
+}
+
+Future<void> expectPostImportPromptVisible(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('post_import_sheet_title')),
+  );
+  expect(find.byKey(const Key('post_import_sheet_title')), findsOneWidget);
+  expect(find.text('导入成功'), findsOneWidget);
+}
+
+void expectPostImportPromptHidden() {
+  expect(find.byKey(const Key('post_import_sheet_title')), findsNothing);
+}
+
+Future<void> expectImportWalletError(
+  WidgetTester tester,
+  String message,
+) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('import_wallet_error_text')),
+  );
+  expect(find.text(message), findsOneWidget);
+}
+
+Future<void> expectWalletReceivePage(
+  WidgetTester tester, {
+  String? address,
+}) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('wallet_receive_page_title')),
+  );
+  expect(find.byKey(const Key('wallet_receive_qr_code')), findsOneWidget);
+  expect(find.byKey(const Key('wallet_receive_address_text')), findsOneWidget);
+  expect(
+    find.byKey(const Key('wallet_receive_set_amount_button')),
+    findsOneWidget,
+  );
+  if (address != null) {
+    expect(find.text(address), findsOneWidget);
+  }
+}
+
+Future<void> expectBackupMnemonicPage(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('backup_mnemonic_page_title')),
+  );
+  expect(
+    find.byKey(const Key('backup_mnemonic_instruction_title')),
+    findsOneWidget,
+  );
+  expect(find.byKey(const Key('backup_mnemonic_word_0')), findsOneWidget);
+  expect(find.byKey(const Key('backup_mnemonic_next_button')), findsOneWidget);
+}
+
+Future<void> completeBackupMnemonicVerification(
+  WidgetTester tester, {
+  required List<String> mnemonicWords,
+}) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('backup_mnemonic_next_button')),
+  );
+  await expectTextVisible(tester, '验证助记词');
+
+  for (var position = 0; position < 3; position++) {
+    final slotFinder = find.byKey(
+      Key('backup_mnemonic_verification_slot_$position'),
+    );
+    final slotText = tester.widget<Text>(slotFinder).data!;
+    final match = RegExp(r'第(\d+)个').firstMatch(slotText);
+    expect(match, isNotNull);
+
+    final wordIndex = int.parse(match!.group(1)!) - 1;
+    final targetWord = mnemonicWords[wordIndex];
+    var tapped = false;
+
+    for (var optionIndex = 0; optionIndex < 12; optionIndex++) {
+      final optionFinder = find.byKey(
+        Key('backup_mnemonic_option_$optionIndex'),
+      );
+      if (optionFinder.evaluate().isEmpty) {
+        continue;
+      }
+
+      final hasWord = find
+          .descendant(of: optionFinder, matching: find.text(targetWord))
+          .evaluate()
+          .isNotEmpty;
+      if (!hasWord) {
+        continue;
+      }
+
+      final optionWidget = tester.widget<GestureDetector>(optionFinder);
+      if (optionWidget.onTap == null) {
+        continue;
+      }
+
+      await tapAndPump(tester, optionFinder);
+      tapped = true;
+      break;
+    }
+
+    expect(tapped, isTrue, reason: '未找到可点击的助记词选项: $targetWord');
+  }
+}
+
+Future<void> setReceiveAmount(WidgetTester tester, String amount) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('wallet_receive_set_amount_button')),
+  );
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('wallet_receive_amount_dialog_title')),
+  );
+  await tester.enterText(
+    find.byKey(const Key('wallet_receive_amount_field')),
+    amount,
+  );
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('wallet_receive_amount_confirm_button')),
+  );
+}
+
+Future<void> unlockBackupMnemonic(
+  WidgetTester tester, {
+  String password = 'Passw0rd!',
+}) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('password_verification_field')),
+  );
+  await tester.enterText(
+    find.byKey(const Key('password_verification_field')),
+    password,
+  );
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('password_verification_confirm_button')),
+  );
+}
+
+Future<void> expectValidationError(WidgetTester tester, String message) async {
+  await expectTextVisible(tester, message);
+}
+
+Future<void> expectValidationErrors(
+  WidgetTester tester,
+  List<String> messages,
+) async {
+  for (final message in messages) {
+    await expectValidationError(tester, message);
+  }
+}
+
+Future<void> openCreateWalletFromHome(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('home_create_wallet_button')),
+  );
+  await tapAndPump(tester, find.byKey(const Key('home_create_wallet_button')));
+}
+
+Future<void> openImportWalletFromHome(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('home_import_wallet_button')),
+  );
+  await tapAndPump(tester, find.byKey(const Key('home_import_wallet_button')));
+}
+
+Future<void> openWalletSelector(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('wallet_home_selector_button')),
+  );
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('wallet_home_selector_button')),
+  );
+}
+
+Future<void> openWalletSelectorAddMenu(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('wallet_selector_add_button')),
+  );
+  await tapAndPump(tester, find.byKey(const Key('wallet_selector_add_button')));
+}
+
+Future<void> chooseCreateWalletFromSelector(WidgetTester tester) async {
+  await openWalletSelectorAddMenu(tester);
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('wallet_selector_add_create_button')),
+  );
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('wallet_selector_add_create_button')),
+  );
+}
+
+Future<void> chooseImportWalletFromSelector(WidgetTester tester) async {
+  await openWalletSelectorAddMenu(tester);
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('wallet_selector_add_import_button')),
+  );
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('wallet_selector_add_import_button')),
+  );
+}
+
+Future<void> chooseViewWalletFromPostImportPrompt(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('post_import_view_wallet_button')),
+  );
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('post_import_view_wallet_button')),
+  );
+}
+
+Future<void> chooseAddNetworksFromPostImportPrompt(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('post_import_add_networks_button')),
+  );
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('post_import_add_networks_button')),
+  );
+}
+
+Future<void> fillCreateWalletForm(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+  String? confirmPassword = 'Passw0rd!',
+}) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('create_wallet_name_field')),
+  );
+
+  await tester.enterText(
+    find.byKey(const Key('create_wallet_name_field')),
+    walletName,
+  );
+  await tester.enterText(
+    find.byKey(const Key('create_wallet_password_field')),
+    password,
+  );
+  if (confirmPassword != null) {
+    await tester.enterText(
+      find.byKey(const Key('create_wallet_confirm_password_field')),
+      confirmPassword,
+    );
+  }
+
+  await unfocusAndPump(tester);
+}
+
+Future<void> fillImportWalletForm(
+  WidgetTester tester, {
+  required String walletName,
+  String mnemonic = kValidImportMnemonic,
+  String password = 'Passw0rd!',
+  String? confirmPassword = 'Passw0rd!',
+}) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('import_wallet_name_field')),
+  );
+
+  await tester.enterText(
+    find.byKey(const Key('import_wallet_name_field')),
+    walletName,
+  );
+  await tester.enterText(
+    find.byKey(const Key('import_wallet_mnemonic_field')),
+    mnemonic,
+  );
+  await tester.enterText(
+    find.byKey(const Key('import_wallet_password_field')),
+    password,
+  );
+  if (confirmPassword != null) {
+    await tester.enterText(
+      find.byKey(const Key('import_wallet_confirm_password_field')),
+      confirmPassword,
+    );
+  }
+
+  await unfocusAndPump(tester);
+}
+
+Future<void> submitCreateWallet(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('create_wallet_submit_button')),
+    settle: const Duration(seconds: 1),
+  );
+}
+
+Future<void> submitImportWallet(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('import_wallet_submit_button')),
+    settle: const Duration(seconds: 1),
+  );
+}
+
+Future<void> createWalletFromHome(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+  String? confirmPassword = 'Passw0rd!',
+}) async {
+  await openCreateWalletFromHome(tester);
+  await fillCreateWalletForm(
+    tester,
+    walletName: walletName,
+    password: password,
+    confirmPassword: confirmPassword,
+  );
+  await submitCreateWallet(tester);
+}
+
+Future<void> importWalletFromHome(
+  WidgetTester tester, {
+  required String walletName,
+  String mnemonic = kValidImportMnemonic,
+  String password = 'Passw0rd!',
+  String? confirmPassword = 'Passw0rd!',
+}) async {
+  await openImportWalletFromHome(tester);
+  await fillImportWalletForm(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+    confirmPassword: confirmPassword,
+  );
+  await submitImportWallet(tester);
+}
+
+Future<void> createWalletFromSelector(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+  String? confirmPassword = 'Passw0rd!',
+}) async {
+  await openWalletSelector(tester);
+  await chooseCreateWalletFromSelector(tester);
+  await fillCreateWalletForm(
+    tester,
+    walletName: walletName,
+    password: password,
+    confirmPassword: confirmPassword,
+  );
+  await submitCreateWallet(tester);
+}
+
+Future<void> importWalletFromSelector(
+  WidgetTester tester, {
+  required String walletName,
+  String mnemonic = kValidImportMnemonic,
+  String password = 'Passw0rd!',
+  String? confirmPassword = 'Passw0rd!',
+}) async {
+  await openWalletSelector(tester);
+  await chooseImportWalletFromSelector(tester);
+  await fillImportWalletForm(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+    confirmPassword: confirmPassword,
+  );
+  await submitImportWallet(tester);
+}
+
+Future<void> importWalletThenViewWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String mnemonic = kValidImportMnemonic,
+  String password = 'Passw0rd!',
+  String? confirmPassword = 'Passw0rd!',
+}) async {
+  await importWalletFromHome(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+    confirmPassword: confirmPassword,
+  );
+  await chooseViewWalletFromPostImportPrompt(tester);
+}
+
+Future<void> importWalletThenAddNetworks(
+  WidgetTester tester, {
+  required String walletName,
+  String mnemonic = kValidImportMnemonic,
+  String password = 'Passw0rd!',
+  String? confirmPassword = 'Passw0rd!',
+}) async {
+  await importWalletFromHome(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+    confirmPassword: confirmPassword,
+  );
+  await chooseAddNetworksFromPostImportPrompt(tester);
+}
+
+Future<void> openAddWalletFromHdManage(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('hd_management_add_wallet_tile')),
+  );
+}
+
+Future<void> createWalletAndAddHdWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String chainId,
+  String password = 'Passw0rd!',
+}) async {
+  await createWalletFromHome(
+    tester,
+    walletName: walletName,
+    password: password,
+  );
+  await expectWalletHome(tester, walletName: walletName);
+
+  await openWalletDetailFromHome(tester);
+  await expectTextVisible(tester, '钱包详情');
+
+  await openHdManageFromWalletDetail(tester);
+  await expectTextVisible(tester, '添加钱包');
+
+  await openAddWalletFromHdManage(tester);
+  await expectTextVisible(tester, '添加钱包');
+
+  await addHdWalletByChainId(tester, chainId: chainId, password: password);
+  await pumpUntilWalletHomeReady(tester);
+}
+
+Future<void> createWalletAndAddAptTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: 'apt_testnet',
+    password: password,
+  );
+}
+
+Future<void> importWalletAndAddAptTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(
+    tester,
+    chainId: 'apt_testnet',
+    password: password,
+  );
+  await pumpUntilWalletHomeReady(tester);
+}
+
+Future<void> expectAptTransferPage(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('apt_transfer_page_title')),
+  );
+  expect(find.byKey(const Key('apt_transfer_address_field')), findsOneWidget);
+  expect(find.byKey(const Key('apt_transfer_amount_field')), findsOneWidget);
+  expect(find.byKey(const Key('apt_transfer_submit_button')), findsOneWidget);
+}
+
+Future<void> expectAptTransactionStatusPage(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('apt_transaction_status_page_title')),
+  );
+  expect(
+    find.byKey(const Key('apt_transaction_status_message')),
+    findsOneWidget,
+  );
+}
+
+Future<String> readAptTransactionHash(WidgetTester tester) async {
+  final finder = find.byKey(const Key('apt_transaction_status_tx_hash_value'));
+  await pumpUntilVisible(tester, finder);
+  return tester.widget<Text>(finder).data!;
+}
+
+Future<void> openAptTransactionLookupFromStatus(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('apt_transaction_status_lookup_button')),
+  );
+}
+
+Future<void> openAptExplorerFromStatusPage(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('apt_transaction_status_open_explorer_button')),
+  );
+}
+
+Future<void> returnToWalletHomeFromStatusPage(WidgetTester tester) async {
+  final homeFinder = find.byKey(const Key('wallet_home_selector_button'));
+  for (var i = 0; i < 4; i++) {
+    if (homeFinder.evaluate().isNotEmpty) {
+      await pumpUntilWalletHomeReady(tester);
+      return;
+    }
+    await tester.pageBack();
+    await tester.pump(const Duration(milliseconds: 600));
+  }
+  await pumpUntilWalletHomeReady(tester);
+}
+
+Future<void> openAssetDetailFromWalletHome(
+  WidgetTester tester, {
+  required String chainId,
+  required String symbol,
+}) async {
+  final assetFinder = find.byKey(Key('wallet_home_asset_${chainId}_$symbol'));
+  await pumpUntilVisible(tester, assetFinder);
+  await tapAndPump(tester, assetFinder);
+}
+
+Future<void> expectAssetDetailPage(
+  WidgetTester tester, {
+  required String symbol,
+}) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('asset_detail_page_title')),
+  );
+  expect(find.byKey(const Key('asset_detail_page_title')), findsOneWidget);
+  expect(find.text(symbol), findsWidgets);
+}
+
+Future<void> openAllActivityFromAssetDetail(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('asset_detail_view_all_activity_button')),
+  );
+}
+
+Future<void> openRecentAssetDetailActivityByTxHash(
+  WidgetTester tester, {
+  required String txHash,
+}) async {
+  final activityFinder = find.byKey(
+    Key('asset_detail_recent_activity_$txHash'),
+  );
+  await pumpUntilVisible(tester, activityFinder);
+  await tapAndPump(tester, activityFinder);
+}
+
+Future<void> expectAssetActivityPage(
+  WidgetTester tester, {
+  required String symbol,
+}) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('asset_activity_page_title')),
+  );
+  expect(find.text('$symbol 活动'), findsOneWidget);
+}
+
+Future<void> openAssetActivityByTxHash(
+  WidgetTester tester, {
+  required String txHash,
+}) async {
+  final activityFinder = find.byKey(Key('asset_activity_item_$txHash'));
+  await pumpUntilVisible(tester, activityFinder);
+  await tapAndPump(tester, activityFinder);
+}
+
+Future<void> expectAptTransactionLookupPage(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('apt_transaction_lookup_page_title')),
+  );
+  expect(
+    find.byKey(const Key('apt_transaction_lookup_hash_field')),
+    findsOneWidget,
+  );
+  expect(
+    find.byKey(const Key('apt_transaction_lookup_submit_button')),
+    findsOneWidget,
+  );
+  expect(
+    find.byKey(const Key('apt_transaction_lookup_open_explorer_button')),
+    findsOneWidget,
+  );
+}
+
+Future<void> lookupAptTransactionByHash(
+  WidgetTester tester, {
+  required String txHash,
+}) async {
+  await tester.enterText(
+    find.byKey(const Key('apt_transaction_lookup_hash_field')),
+    txHash,
+  );
+  await unfocusAndPump(tester);
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('apt_transaction_lookup_submit_button')),
+  );
+}
+
+Future<void> expectAptLookupHashFieldValue(
+  WidgetTester tester, {
+  required String txHash,
+}) async {
+  final field = tester.widget<TextField>(
+    find.byKey(const Key('apt_transaction_lookup_hash_field')),
+  );
+  expect(field.controller?.text, txHash);
+}
+
+Future<void> openAptExplorerFromLookupPage(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('apt_transaction_lookup_open_explorer_button')),
+  );
+}
+
+Future<void> fillAptTransferForm(
+  WidgetTester tester, {
+  required String address,
+  required String amount,
+}) async {
+  await tester.enterText(
+    find.byKey(const Key('apt_transfer_address_field')),
+    address,
+  );
+  await tester.enterText(
+    find.byKey(const Key('apt_transfer_amount_field')),
+    amount,
+  );
+  await unfocusAndPump(tester);
+}
+
+Future<void> submitAptTransfer(WidgetTester tester) async {
+  await tapAndPump(tester, find.byKey(const Key('apt_transfer_submit_button')));
+}
+
+Future<void> expectPasswordVerificationDialogVisible(
+  WidgetTester tester,
+) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('password_verification_field')),
+  );
+  expect(
+    find.byKey(const Key('password_verification_cancel_button')),
+    findsOneWidget,
+  );
+  expect(
+    find.byKey(const Key('password_verification_confirm_button')),
+    findsOneWidget,
+  );
+}
+
+Future<void> cancelPasswordVerificationDialog(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('password_verification_cancel_button')),
+  );
+}
+
+Future<void> waitForAptTransactionConfirmed(
+  WidgetTester tester, {
+  Duration timeout = const Duration(minutes: 2),
+  Duration step = const Duration(seconds: 2),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await tester.pump(step);
+
+    final confirmedFinder = find.text('交易已上链确认');
+    if (confirmedFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final failedFinder = find.text('交易执行失败');
+    if (failedFinder.evaluate().isNotEmpty) {
+      final vmStatusFinder = find.byKey(
+        const Key('apt_transaction_status_vm_status'),
+      );
+      String? vmStatus;
+      if (vmStatusFinder.evaluate().isNotEmpty) {
+        vmStatus = tester.widget<Text>(vmStatusFinder).data;
+      }
+      throw TestFailure(
+        vmStatus == null || vmStatus.isEmpty
+            ? 'Apt testnet transaction failed'
+            : 'Apt testnet transaction failed: $vmStatus',
+      );
+    }
+  }
+
+  throw TestFailure(
+    'Timed out waiting for Apt testnet transaction confirmation',
+  );
+}
+
+Future<void> unlockPasswordPrompt(
+  WidgetTester tester, {
+  String password = 'Passw0rd!',
+}) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('password_verification_field')),
+  );
+  await tester.enterText(
+    find.byKey(const Key('password_verification_field')),
+    password,
+  );
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('password_verification_confirm_button')),
+  );
+}
+
+Future<void> addHdWalletByChainId(
+  WidgetTester tester, {
+  required String chainId,
+  String password = 'Passw0rd!',
+}) async {
+  final chainFinder = find.byKey(Key('hd_wallet_add_chain_$chainId'));
+  await tester.scrollUntilVisible(
+    chainFinder,
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tapAndPump(tester, chainFinder);
+  await tapAndPump(
+    tester,
+    find.byKey(Key('hd_wallet_list_add_subwallet_$chainId')),
+    settle: const Duration(seconds: 1),
+  );
+  await unlockPasswordPrompt(tester, password: password);
+}
+
+Future<void> captureToastMessages(List<String> toastMessages) async {
+  toastMessages.clear();
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(kToastChannel, (call) async {
+        final arguments = call.arguments;
+        if (arguments is Map) {
+          final msg = arguments['msg'];
+          if (msg is String) {
+            toastMessages.add(msg);
+          }
+        }
+        return true;
+      });
+}
+
+Future<void> stopCapturingToastMessages() async {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(kToastChannel, null);
+}
+
+void expectLatestToastMessage(List<String> toastMessages, String message) {
+  expect(toastMessages, isNotEmpty);
+  expect(toastMessages.last, message);
+}
+
+Future<void> captureExternalLaunchUrls(List<String> launchedUrls) async {
+  launchedUrls.clear();
+  final channel = BasicMessageChannel<Object?>(
+    kUrlLauncherIosLaunchChannelName,
+    kUrlLauncherIosPigeonCodec,
+  );
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockDecodedMessageHandler<Object?>(channel, (message) async {
+        final arguments = message as List<Object?>?;
+        final url = arguments != null && arguments.isNotEmpty
+            ? arguments.first
+            : null;
+        if (url is String) {
+          launchedUrls.add(url);
+        }
+        return <Object?>[_UrlLauncherIosLaunchResult.success];
+      });
+}
+
+Future<void> stopCapturingExternalLaunchUrls() async {
+  final channel = BasicMessageChannel<Object?>(
+    kUrlLauncherIosLaunchChannelName,
+    kUrlLauncherIosPigeonCodec,
+  );
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockDecodedMessageHandler<Object?>(channel, null);
+}
+
+void expectLatestExternalLaunchUrl(List<String> launchedUrls, String url) {
+  expect(launchedUrls, isNotEmpty);
+  expect(launchedUrls.last, url);
+}

@@ -32,6 +32,7 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/integration_test/.test_wallet_config.json
 
 # Symbolication related
 app.*.symbols
