@@ -1183,7 +1183,18 @@ Future<void> waitForXrpTransactionConfirmed(
 
     final failedFinder = find.text('交易执行失败');
     if (failedFinder.evaluate().isNotEmpty) {
-      throw TestFailure('XRP testnet transaction failed');
+      final statusMessageFinder = find.byKey(
+        const Key('xrp_transaction_status_message'),
+      );
+      String? statusMessage;
+      if (statusMessageFinder.evaluate().isNotEmpty) {
+        statusMessage = tester.widget<Text>(statusMessageFinder).data;
+      }
+      throw TestFailure(
+        statusMessage == null || statusMessage.isEmpty
+            ? 'XRP testnet transaction failed'
+            : 'XRP testnet transaction failed: $statusMessage',
+      );
     }
   }
 

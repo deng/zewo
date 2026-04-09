@@ -21,10 +21,22 @@ for candidate in "integration_test/.test_wallet_config.json" "zero/integration_t
 done
 
 DART_DEFINE_ARGS=()
+DART_DEFINE_FILE=""
 if [ -n "$CONFIG_PATH" ]; then
-  CONFIG_B64="$(base64 < "$CONFIG_PATH" | tr -d '\n')"
-  DART_DEFINE_ARGS+=("--dart-define=ZERO_ITEST_WALLET_CONFIG_B64=$CONFIG_B64")
+  CONFIG_B64="$(base64 < "$CONFIG_PATH" | tr -d '\r\n')"
+  DART_DEFINE_FILE="$(mktemp "${TMPDIR:-/tmp}/flutter-dart-defines.XXXXXX.json")"
+  chmod 600 "$DART_DEFINE_FILE"
+  printf '{"ZERO_ITEST_WALLET_CONFIG_B64":"%s"}\n' "$CONFIG_B64" > "$DART_DEFINE_FILE"
+  DART_DEFINE_ARGS+=("--dart-define-from-file=$DART_DEFINE_FILE")
 fi
+
+cleanup() {
+  if [ -n "${DART_DEFINE_FILE:-}" ] && [ -f "$DART_DEFINE_FILE" ]; then
+    rm -f "$DART_DEFINE_FILE"
+  fi
+}
+
+trap cleanup EXIT
 
 run_flutter_test() {
   local log_file="$1"

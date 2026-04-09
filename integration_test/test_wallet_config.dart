@@ -59,10 +59,11 @@ class IntegrationTestWalletConfig {
   bool get hasAnyFundedWallet =>
       hasFundedAptTestnetWallet || hasFundedXrpTestnetWallet;
 
-  String? get xrpTestnetTransferDestinationTagOrNull =>
-      xrpTestnetTransferDestinationTag.isEmpty
-      ? null
-      : xrpTestnetTransferDestinationTag;
+  String? get xrpTestnetTransferDestinationTagOrNull {
+    return xrpTestnetTransferDestinationTag.isEmpty
+        ? null
+        : xrpTestnetTransferDestinationTag;
+  }
 }
 
 const List<String> kIntegrationTestWalletConfigPaths = <String>[
