@@ -12,6 +12,32 @@ if [ "${#TARGETS[@]}" -eq 0 ]; then
   TARGETS=("integration_test")
 fi
 
+CONFIG_PATH=""
+for candidate in "integration_test/.test_wallet_config.json" "zero/integration_test/.test_wallet_config.json"; do
+  if [ -f "$candidate" ]; then
+    CONFIG_PATH="$candidate"
+    break
+  fi
+done
+
+DART_DEFINE_ARGS=()
+DART_DEFINE_FILE=""
+if [ -n "$CONFIG_PATH" ]; then
+  CONFIG_B64="$(base64 < "$CONFIG_PATH" | tr -d '\r\n')"
+  DART_DEFINE_FILE="$(mktemp "${TMPDIR:-/tmp}/flutter-dart-defines.XXXXXX.json")"
+  chmod 600 "$DART_DEFINE_FILE"
+  printf '{"ZERO_ITEST_WALLET_CONFIG_B64":"%s"}\n' "$CONFIG_B64" > "$DART_DEFINE_FILE"
+  DART_DEFINE_ARGS+=("--dart-define-from-file=$DART_DEFINE_FILE")
+fi
+
+cleanup() {
+  if [ -n "${DART_DEFINE_FILE:-}" ] && [ -f "$DART_DEFINE_FILE" ]; then
+    rm -f "$DART_DEFINE_FILE"
+  fi
+}
+
+trap cleanup EXIT
+
 run_flutter_test() {
   local log_file="$1"
   set +e
@@ -24,7 +50,7 @@ run_flutter_test() {
     -u HTTPS_PROXY \
     -u no_proxy \
     -u NO_PROXY \
-    flutter test "${TARGETS[@]}" 2>&1 | tee "$log_file"
+    flutter test "${DART_DEFINE_ARGS[@]}" "${TARGETS[@]}" 2>&1 | tee "$log_file"
   local rc=${PIPESTATUS[0]}
   set -e
   return "$rc"

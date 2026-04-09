@@ -1,5 +1,10 @@
 {
   "fundedAptTestnetMnemonic": "replace with funded apt testnet mnemonic",
   "fundedAptTestnetAddress": "0xreplacewithfundedapttestnetaddress",
-  "aptTestnetTransferRecipientAddress": "0x1111111111111111111111111111111111111111111111111111111111111111"
+  "aptTestnetTransferRecipientAddress": "0x1111111111111111111111111111111111111111111111111111111111111111",
+  "fundedXrpTestnetMnemonic": "replace with funded xrp testnet mnemonic",
+  "fundedXrpTestnetAddress": "rReplaceWithFundedXrpTestnetAddress",
+  "xrpTestnetTransferRecipientAddress": "rReplaceWithRecipientAddress",
+  "xrpTestnetTransferAmount": "1",
+  "xrpTestnetTransferDestinationTag": ""
 }
