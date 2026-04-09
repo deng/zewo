@@ -380,18 +380,7 @@ Future<void> unlockBackupMnemonic(
   WidgetTester tester, {
   String password = 'Passw0rd!',
 }) async {
-  await pumpUntilVisible(
-    tester,
-    find.byKey(const Key('password_verification_field')),
-  );
-  await tester.enterText(
-    find.byKey(const Key('password_verification_field')),
-    password,
-  );
-  await tapAndPump(
-    tester,
-    find.byKey(const Key('password_verification_confirm_button')),
-  );
+  await unlockPasswordPrompt(tester, password: password);
 }
 
 Future<void> expectValidationError(WidgetTester tester, String message) async {

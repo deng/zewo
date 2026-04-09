@@ -53,11 +53,19 @@ IntegrationTestWalletConfig? loadIntegrationTestWalletConfig() {
     return null;
   }
 
-  final decoded = jsonDecode(content);
-  if (decoded is! Map<String, dynamic>) {
-    throw const FormatException('集成测试钱包配置格式无效');
-  }
+  try {
+    final decoded = jsonDecode(content);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('集成测试钱包配置格式无效');
+    }
 
-  final config = IntegrationTestWalletConfig.fromJson(decoded);
-  return config.hasFundedAptTestnetWallet ? config : null;
+    final config = IntegrationTestWalletConfig.fromJson(decoded);
+    return config.hasFundedAptTestnetWallet ? config : null;
+  } on FormatException catch (e) {
+    stderr.writeln(
+      'Skipping funded integration tests: invalid wallet config in '
+      '${configFile.path}: $e',
+    );
+    return null;
+  }
 }

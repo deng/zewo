@@ -38,6 +38,19 @@ void main() {
     expect(loadIntegrationTestWalletConfig(), isNull);
   });
 
+  test('returns null when local test wallet config json is malformed', () async {
+    final integrationTestDir = Directory(
+      '${tempDir.path}${Platform.pathSeparator}integration_test',
+    );
+    await integrationTestDir.create(recursive: true);
+    final configFile = File(
+      '${integrationTestDir.path}${Platform.pathSeparator}.test_wallet_config.json',
+    );
+    await configFile.writeAsString('{not-json');
+
+    expect(loadIntegrationTestWalletConfig(), isNull);
+  });
+
   test('loads funded wallet config from local json file', () async {
     final integrationTestDir = Directory(
       '${tempDir.path}${Platform.pathSeparator}integration_test',
