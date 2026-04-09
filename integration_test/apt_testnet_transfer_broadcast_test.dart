@@ -74,10 +74,23 @@ void main() {
       );
       final activitiesAfterConfirmation = WalletProvider.getInstance()
           ?.getWalletAssetActivities(currentWallet.id);
-      final broadcastActivity = activitiesAfterConfirmation?.firstWhere(
-        (activity) => activity.txHash == txHash,
+      dynamic broadcastActivity;
+      if (activitiesAfterConfirmation != null) {
+        for (final activity in activitiesAfterConfirmation) {
+          if (activity.txHash == txHash) {
+            broadcastActivity = activity;
+            break;
+          }
+        }
+      }
+      expect(
+        broadcastActivity,
+        isNotNull,
+        reason:
+            'Expected to find a wallet activity for confirmed transaction '
+            '$txHash in wallet ${currentWallet.id}, but no matching activity '
+            'was present yet.',
       );
-      expect(broadcastActivity, isNotNull);
       expect(broadcastActivity!.status.name, 'confirmed');
 
       await openAptTransactionLookupFromStatus(tester);

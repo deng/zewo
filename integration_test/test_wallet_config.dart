@@ -29,16 +29,6 @@ class IntegrationTestWalletConfig {
       aptTestnetTransferRecipientAddress.isNotEmpty;
 }
 
-const IntegrationTestWalletConfig
-kDefaultIntegrationTestWalletConfig = IntegrationTestWalletConfig(
-  fundedAptTestnetMnemonic:
-      'material ripple excuse loop below route congress october theme tiny arrive matter',
-  fundedAptTestnetAddress:
-      '0x2012f22e2e1780a0e78208f40cfb3cf6b84f6cb7f49f2fa053d97a056e630642',
-  aptTestnetTransferRecipientAddress:
-      '0x1111111111111111111111111111111111111111111111111111111111111111',
-);
-
 const List<String> kIntegrationTestWalletConfigPaths = <String>[
   'integration_test/.test_wallet_config.json',
   'zero/integration_test/.test_wallet_config.json',
@@ -55,7 +45,7 @@ IntegrationTestWalletConfig? loadIntegrationTestWalletConfig() {
   }
 
   if (configFile == null) {
-    return kDefaultIntegrationTestWalletConfig;
+    return null;
   }
 
   final content = configFile.readAsStringSync().trim();
@@ -69,7 +59,5 @@ IntegrationTestWalletConfig? loadIntegrationTestWalletConfig() {
   }
 
   final config = IntegrationTestWalletConfig.fromJson(decoded);
-  return config.hasFundedAptTestnetWallet
-      ? config
-      : kDefaultIntegrationTestWalletConfig;
+  return config.hasFundedAptTestnetWallet ? config : null;
 }
