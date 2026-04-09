@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wallet/wallet.dart';
-import 'package:wallet/src/core/wallet_service.dart';
 
 import 'test_helpers.dart';
 

@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wallet/wallet.dart';
-import 'package:wallet/src/coins/apt/apt_transaction_status_utils.dart';
 
 import 'test_helpers.dart';
 import 'test_wallet_config.dart';
@@ -72,26 +71,13 @@ void main() {
           networkType: currentWallet.networkType,
         ),
       );
-      final activitiesAfterConfirmation = WalletProvider.getInstance()
-          ?.getWalletAssetActivities(currentWallet.id);
-      dynamic broadcastActivity;
-      if (activitiesAfterConfirmation != null) {
-        for (final activity in activitiesAfterConfirmation) {
-          if (activity.txHash == txHash) {
-            broadcastActivity = activity;
-            break;
-          }
-        }
-      }
-      expect(
-        broadcastActivity,
-        isNotNull,
-        reason:
-            'Expected to find a wallet activity for confirmed transaction '
-            '$txHash in wallet ${currentWallet.id}, but no matching activity '
-            'was present yet.',
+      final broadcastActivity = await waitForWalletActivityByTxHash(
+        tester,
+        walletId: currentWallet.id,
+        txHash: txHash,
+        status: AssetActivityStatus.confirmed,
       );
-      expect(broadcastActivity!.status.name, 'confirmed');
+      expect(broadcastActivity.status.name, 'confirmed');
 
       await openAptTransactionLookupFromStatus(tester);
       await expectAptTransactionLookupPage(tester);

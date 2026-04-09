@@ -1,4 +1,4 @@
-import 'package:wallet/src/core/balance_sync_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,6 +47,9 @@ class _UrlLauncherIosPigeonCodec extends StandardMessageCodec {
 
 const MessageCodec<Object?> kUrlLauncherIosPigeonCodec =
     _UrlLauncherIosPigeonCodec();
+
+bool get supportsExternalLaunchUrlCapture =>
+    defaultTargetPlatform == TargetPlatform.iOS;
 
 void configureIntegrationTest() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -169,6 +172,36 @@ Future<String> waitForCurrentWalletNativeAssetBalanceGreaterThanZero(
 
   throw TestFailure(
     'Timed out waiting for current wallet native asset $symbol balance to sync',
+  );
+}
+
+Future<AssetActivityRecord> waitForWalletActivityByTxHash(
+  WidgetTester tester, {
+  required String walletId,
+  required String txHash,
+  AssetActivityStatus? status,
+  Duration timeout = const Duration(seconds: 20),
+  Duration step = const Duration(milliseconds: 500),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    final activities = WalletProvider.getInstance()?.getWalletAssetActivities(
+      walletId,
+    );
+    if (activities != null) {
+      for (final activity in activities) {
+        if (activity.txHash == txHash &&
+            (status == null || activity.status == status)) {
+          return activity;
+        }
+      }
+    }
+    await tester.pump(step);
+  }
+
+  throw TestFailure(
+    'Timed out waiting for wallet activity $txHash'
+    '${status == null ? '' : ' with status ${status.name}'} in wallet $walletId',
   );
 }
 
@@ -1014,6 +1047,9 @@ void expectLatestToastMessage(List<String> toastMessages, String message) {
 
 Future<void> captureExternalLaunchUrls(List<String> launchedUrls) async {
   launchedUrls.clear();
+  if (!supportsExternalLaunchUrlCapture) {
+    return;
+  }
   final channel = BasicMessageChannel<Object?>(
     kUrlLauncherIosLaunchChannelName,
     kUrlLauncherIosPigeonCodec,
@@ -1032,6 +1068,9 @@ Future<void> captureExternalLaunchUrls(List<String> launchedUrls) async {
 }
 
 Future<void> stopCapturingExternalLaunchUrls() async {
+  if (!supportsExternalLaunchUrlCapture) {
+    return;
+  }
   final channel = BasicMessageChannel<Object?>(
     kUrlLauncherIosLaunchChannelName,
     kUrlLauncherIosPigeonCodec,
@@ -1041,6 +1080,9 @@ Future<void> stopCapturingExternalLaunchUrls() async {
 }
 
 void expectLatestExternalLaunchUrl(List<String> launchedUrls, String url) {
+  if (!supportsExternalLaunchUrlCapture) {
+    return;
+  }
   expect(launchedUrls, isNotEmpty);
   expect(launchedUrls.last, url);
 }
