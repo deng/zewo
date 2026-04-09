@@ -1,0 +1,5 @@
+{
+  "fundedAptTestnetMnemonic": "replace with funded apt testnet mnemonic",
+  "fundedAptTestnetAddress": "0xreplacewithfundedapttestnetaddress",
+  "aptTestnetTransferRecipientAddress": "0x1111111111111111111111111111111111111111111111111111111111111111"
+}

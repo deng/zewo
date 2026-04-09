@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wallet/wallet.dart';
 
-void main() async {
+Future<void> main() async {
+  await bootstrapZeroWalletApp();
+}
+
+Future<void> bootstrapZeroWalletApp() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // 初始化 AppLifecycleManager
   await AppLifecycleManager.instance.initialize();
 
@@ -50,6 +54,7 @@ class _ZeroWalletAppState extends State<ZeroWalletApp> {
       ],
       child: MaterialApp(
         title: 'Zero Wallet',
+        onGenerateRoute: WalletRoutes.onGenerateRoute,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.blue,
