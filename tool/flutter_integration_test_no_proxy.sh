@@ -12,6 +12,20 @@ if [ "${#TARGETS[@]}" -eq 0 ]; then
   TARGETS=("integration_test")
 fi
 
+CONFIG_PATH=""
+for candidate in "integration_test/.test_wallet_config.json" "zero/integration_test/.test_wallet_config.json"; do
+  if [ -f "$candidate" ]; then
+    CONFIG_PATH="$candidate"
+    break
+  fi
+done
+
+DART_DEFINE_ARGS=()
+if [ -n "$CONFIG_PATH" ]; then
+  CONFIG_B64="$(base64 < "$CONFIG_PATH" | tr -d '\n')"
+  DART_DEFINE_ARGS+=("--dart-define=ZERO_ITEST_WALLET_CONFIG_B64=$CONFIG_B64")
+fi
+
 run_flutter_test() {
   local log_file="$1"
   set +e
@@ -24,7 +38,7 @@ run_flutter_test() {
     -u HTTPS_PROXY \
     -u no_proxy \
     -u NO_PROXY \
-    flutter test "${TARGETS[@]}" 2>&1 | tee "$log_file"
+    flutter test "${DART_DEFINE_ARGS[@]}" "${TARGETS[@]}" 2>&1 | tee "$log_file"
   local rc=${PIPESTATUS[0]}
   set -e
   return "$rc"

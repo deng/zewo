@@ -63,7 +63,12 @@ void main() {
 {
   "fundedAptTestnetMnemonic": "mnemonic words",
   "fundedAptTestnetAddress": "0xabc",
-  "aptTestnetTransferRecipientAddress": "0xdef"
+  "aptTestnetTransferRecipientAddress": "0xdef",
+  "fundedXrpTestnetMnemonic": "xrp mnemonic words",
+  "fundedXrpTestnetAddress": "rFundedXrpAddress",
+  "xrpTestnetTransferRecipientAddress": "rRecipientXrpAddress",
+  "xrpTestnetTransferAmount": "2.5",
+  "xrpTestnetTransferDestinationTag": "123"
 }
 ''');
 
@@ -71,8 +76,39 @@ void main() {
 
     expect(config, isNotNull);
     expect(config!.hasFundedAptTestnetWallet, isTrue);
+    expect(config.hasFundedXrpTestnetWallet, isTrue);
     expect(config.fundedAptTestnetMnemonic, 'mnemonic words');
     expect(config.fundedAptTestnetAddress, '0xabc');
     expect(config.aptTestnetTransferRecipientAddress, '0xdef');
+    expect(config.fundedXrpTestnetMnemonic, 'xrp mnemonic words');
+    expect(config.fundedXrpTestnetAddress, 'rFundedXrpAddress');
+    expect(config.xrpTestnetTransferRecipientAddress, 'rRecipientXrpAddress');
+    expect(config.xrpTestnetTransferAmount, '2.5');
+    expect(config.xrpTestnetTransferDestinationTagOrNull, '123');
+  });
+
+  test('loads xrp-only funded wallet config from local json file', () async {
+    final integrationTestDir = Directory(
+      '${tempDir.path}${Platform.pathSeparator}integration_test',
+    );
+    await integrationTestDir.create(recursive: true);
+    final configFile = File(
+      '${integrationTestDir.path}${Platform.pathSeparator}.test_wallet_config.json',
+    );
+    await configFile.writeAsString('''
+{
+  "fundedXrpTestnetMnemonic": "xrp mnemonic words",
+  "fundedXrpTestnetAddress": "rFundedXrpAddress",
+  "xrpTestnetTransferRecipientAddress": "rRecipientXrpAddress"
+}
+''');
+
+    final config = loadIntegrationTestWalletConfig();
+
+    expect(config, isNotNull);
+    expect(config!.hasFundedAptTestnetWallet, isFalse);
+    expect(config.hasFundedXrpTestnetWallet, isTrue);
+    expect(config.xrpTestnetTransferAmount, '1');
+    expect(config.xrpTestnetTransferDestinationTagOrNull, isNull);
   });
 }

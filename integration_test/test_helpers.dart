@@ -14,6 +14,7 @@ const String kInvalidChecksumMnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon';
 const String kValidAptTransferAddress =
     '0x1111111111111111111111111111111111111111111111111111111111111111';
+const String kValidXrpTransferAddress = 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe';
 const MethodChannel kToastChannel = MethodChannel('PonnamKarthik/fluttertoast');
 const String kUrlLauncherIosLaunchChannelName =
     'dev.flutter.pigeon.url_launcher_ios.UrlLauncherApi.launchUrl';
@@ -92,6 +93,45 @@ Future<void> tapAndPump(
   expect(finder, findsOneWidget);
   await tester.ensureVisible(finder);
   await tester.pump(const Duration(milliseconds: 200));
+  await tester.tap(finder);
+  await tester.pump(settle);
+}
+
+Future<void> scrollFinderIntoView(
+  WidgetTester tester,
+  Finder finder, {
+  Finder? scrollable,
+  double delta = 300,
+}) async {
+  if (finder.evaluate().isEmpty) {
+    final scrollableFinder = scrollable ?? find.byType(Scrollable).first;
+    expect(scrollableFinder, findsWidgets);
+    await tester.scrollUntilVisible(
+      finder,
+      delta,
+      scrollable: scrollableFinder,
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+  }
+
+  await tester.ensureVisible(finder);
+  await tester.pump(const Duration(milliseconds: 200));
+}
+
+Future<void> scrollToAndTap(
+  WidgetTester tester,
+  Finder finder, {
+  Finder? scrollable,
+  double delta = 300,
+  Duration settle = const Duration(milliseconds: 600),
+}) async {
+  await scrollFinderIntoView(
+    tester,
+    finder,
+    scrollable: scrollable,
+    delta: delta,
+  );
+  expect(finder, findsOneWidget);
   await tester.tap(finder);
   await tester.pump(settle);
 }
@@ -706,6 +746,19 @@ Future<void> createWalletAndAddAptTestnetWallet(
   );
 }
 
+Future<void> createWalletAndAddXrpTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: 'xrp_testnet',
+    password: password,
+  );
+}
+
 Future<void> importWalletAndAddAptTestnetWallet(
   WidgetTester tester, {
   required String walletName,
@@ -726,6 +779,26 @@ Future<void> importWalletAndAddAptTestnetWallet(
   await pumpUntilWalletHomeReady(tester);
 }
 
+Future<void> importWalletAndAddXrpTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(
+    tester,
+    chainId: 'xrp_testnet',
+    password: password,
+  );
+  await pumpUntilWalletHomeReady(tester);
+}
+
 Future<void> expectAptTransferPage(WidgetTester tester) async {
   await pumpUntilVisible(
     tester,
@@ -734,6 +807,20 @@ Future<void> expectAptTransferPage(WidgetTester tester) async {
   expect(find.byKey(const Key('apt_transfer_address_field')), findsOneWidget);
   expect(find.byKey(const Key('apt_transfer_amount_field')), findsOneWidget);
   expect(find.byKey(const Key('apt_transfer_submit_button')), findsOneWidget);
+}
+
+Future<void> expectXrpTransferPage(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('xrp_transfer_page_title')),
+  );
+  expect(find.byKey(const Key('xrp_transfer_address_field')), findsOneWidget);
+  expect(find.byKey(const Key('xrp_transfer_amount_field')), findsOneWidget);
+  expect(
+    find.byKey(const Key('xrp_transfer_destination_tag_field')),
+    findsOneWidget,
+  );
+  expect(find.byKey(const Key('xrp_transfer_submit_button')), findsOneWidget);
 }
 
 Future<void> expectAptTransactionStatusPage(WidgetTester tester) async {
@@ -747,10 +834,27 @@ Future<void> expectAptTransactionStatusPage(WidgetTester tester) async {
   );
 }
 
+Future<void> expectXrpTransactionStatusPage(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('xrp_transaction_status_page_title')),
+  );
+  expect(
+    find.byKey(const Key('xrp_transaction_status_message')),
+    findsOneWidget,
+  );
+}
+
 Future<String> readAptTransactionHash(WidgetTester tester) async {
   final finder = find.byKey(const Key('apt_transaction_status_tx_hash_value'));
   await pumpUntilVisible(tester, finder);
   return tester.widget<Text>(finder).data!;
+}
+
+Future<String> readXrpTransactionHash(WidgetTester tester) async {
+  final finder = find.byKey(const Key('xrp_transaction_status_tx_hash_value'));
+  await pumpUntilVisible(tester, finder);
+  return tester.widget<SelectableText>(finder).data!;
 }
 
 Future<void> openAptTransactionLookupFromStatus(WidgetTester tester) async {
@@ -761,9 +865,23 @@ Future<void> openAptTransactionLookupFromStatus(WidgetTester tester) async {
 }
 
 Future<void> openAptExplorerFromStatusPage(WidgetTester tester) async {
-  await tapAndPump(
+  await scrollToAndTap(
     tester,
     find.byKey(const Key('apt_transaction_status_open_explorer_button')),
+  );
+}
+
+Future<void> openXrpTransactionLookupFromStatus(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('xrp_transaction_status_lookup_button')),
+  );
+}
+
+Future<void> openXrpExplorerFromStatusPage(WidgetTester tester) async {
+  await scrollToAndTap(
+    tester,
+    find.byKey(const Key('xrp_transaction_status_open_explorer_button')),
   );
 }
 
@@ -859,6 +977,25 @@ Future<void> expectAptTransactionLookupPage(WidgetTester tester) async {
   );
 }
 
+Future<void> expectXrpTransactionLookupPage(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('xrp_transaction_lookup_page_title')),
+  );
+  expect(
+    find.byKey(const Key('xrp_transaction_lookup_hash_field')),
+    findsOneWidget,
+  );
+  expect(
+    find.byKey(const Key('xrp_transaction_lookup_submit_button')),
+    findsOneWidget,
+  );
+  expect(
+    find.byKey(const Key('xrp_transaction_lookup_open_explorer_button')),
+    findsOneWidget,
+  );
+}
+
 Future<void> lookupAptTransactionByHash(
   WidgetTester tester, {
   required String txHash,
@@ -891,6 +1028,38 @@ Future<void> openAptExplorerFromLookupPage(WidgetTester tester) async {
   );
 }
 
+Future<void> lookupXrpTransactionByHash(
+  WidgetTester tester, {
+  required String txHash,
+}) async {
+  await tester.enterText(
+    find.byKey(const Key('xrp_transaction_lookup_hash_field')),
+    txHash,
+  );
+  await unfocusAndPump(tester);
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('xrp_transaction_lookup_submit_button')),
+  );
+}
+
+Future<void> expectXrpLookupHashFieldValue(
+  WidgetTester tester, {
+  required String txHash,
+}) async {
+  final field = tester.widget<TextField>(
+    find.byKey(const Key('xrp_transaction_lookup_hash_field')),
+  );
+  expect(field.controller?.text, txHash);
+}
+
+Future<void> openXrpExplorerFromLookupPage(WidgetTester tester) async {
+  await scrollToAndTap(
+    tester,
+    find.byKey(const Key('xrp_transaction_lookup_open_explorer_button')),
+  );
+}
+
 Future<void> fillAptTransferForm(
   WidgetTester tester, {
   required String address,
@@ -907,8 +1076,35 @@ Future<void> fillAptTransferForm(
   await unfocusAndPump(tester);
 }
 
+Future<void> fillXrpTransferForm(
+  WidgetTester tester, {
+  required String address,
+  required String amount,
+  String? destinationTag,
+}) async {
+  await tester.enterText(
+    find.byKey(const Key('xrp_transfer_address_field')),
+    address,
+  );
+  await tester.enterText(
+    find.byKey(const Key('xrp_transfer_amount_field')),
+    amount,
+  );
+  if (destinationTag != null) {
+    await tester.enterText(
+      find.byKey(const Key('xrp_transfer_destination_tag_field')),
+      destinationTag,
+    );
+  }
+  await unfocusAndPump(tester);
+}
+
 Future<void> submitAptTransfer(WidgetTester tester) async {
   await tapAndPump(tester, find.byKey(const Key('apt_transfer_submit_button')));
+}
+
+Future<void> submitXrpTransfer(WidgetTester tester) async {
+  await tapAndPump(tester, find.byKey(const Key('xrp_transfer_submit_button')));
 }
 
 Future<void> expectPasswordVerificationDialogVisible(
@@ -968,6 +1164,31 @@ Future<void> waitForAptTransactionConfirmed(
 
   throw TestFailure(
     'Timed out waiting for Apt testnet transaction confirmation',
+  );
+}
+
+Future<void> waitForXrpTransactionConfirmed(
+  WidgetTester tester, {
+  Duration timeout = const Duration(minutes: 2),
+  Duration step = const Duration(seconds: 2),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await tester.pump(step);
+
+    final confirmedFinder = find.text('交易已上链确认');
+    if (confirmedFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final failedFinder = find.text('交易执行失败');
+    if (failedFinder.evaluate().isNotEmpty) {
+      throw TestFailure('XRP testnet transaction failed');
+    }
+  }
+
+  throw TestFailure(
+    'Timed out waiting for XRP testnet transaction confirmation',
   );
 }
 
