@@ -9,6 +9,10 @@ class IntegrationTestWalletConfig {
     required this.fundedAptTestnetMnemonic,
     required this.fundedAptTestnetAddress,
     required this.aptTestnetTransferRecipientAddress,
+    this.fundedEthSepoliaMnemonic = '',
+    this.fundedEthSepoliaAddress = '',
+    this.ethSepoliaTransferRecipientAddress = '',
+    this.ethSepoliaTransferAmount = '0.0001',
     this.fundedXrpTestnetMnemonic = '',
     this.fundedXrpTestnetAddress = '',
     this.xrpTestnetTransferRecipientAddress = '',
@@ -19,6 +23,10 @@ class IntegrationTestWalletConfig {
   final String fundedAptTestnetMnemonic;
   final String fundedAptTestnetAddress;
   final String aptTestnetTransferRecipientAddress;
+  final String fundedEthSepoliaMnemonic;
+  final String fundedEthSepoliaAddress;
+  final String ethSepoliaTransferRecipientAddress;
+  final String ethSepoliaTransferAmount;
   final String fundedXrpTestnetMnemonic;
   final String fundedXrpTestnetAddress;
   final String xrpTestnetTransferRecipientAddress;
@@ -26,6 +34,7 @@ class IntegrationTestWalletConfig {
   final String xrpTestnetTransferDestinationTag;
 
   factory IntegrationTestWalletConfig.fromJson(Map<String, dynamic> json) {
+    final ethAmount = json['ethSepoliaTransferAmount']?.toString().trim() ?? '';
     final xrpAmount = json['xrpTestnetTransferAmount']?.toString().trim() ?? '';
     return IntegrationTestWalletConfig(
       fundedAptTestnetMnemonic:
@@ -34,6 +43,13 @@ class IntegrationTestWalletConfig {
           json['fundedAptTestnetAddress']?.toString().trim() ?? '',
       aptTestnetTransferRecipientAddress:
           json['aptTestnetTransferRecipientAddress']?.toString().trim() ?? '',
+      fundedEthSepoliaMnemonic:
+          json['fundedEthSepoliaMnemonic']?.toString().trim() ?? '',
+      fundedEthSepoliaAddress:
+          json['fundedEthSepoliaAddress']?.toString().trim() ?? '',
+      ethSepoliaTransferRecipientAddress:
+          json['ethSepoliaTransferRecipientAddress']?.toString().trim() ?? '',
+      ethSepoliaTransferAmount: ethAmount.isEmpty ? '0.0001' : ethAmount,
       fundedXrpTestnetMnemonic:
           json['fundedXrpTestnetMnemonic']?.toString().trim() ?? '',
       fundedXrpTestnetAddress:
@@ -51,13 +67,20 @@ class IntegrationTestWalletConfig {
       fundedAptTestnetAddress.isNotEmpty &&
       aptTestnetTransferRecipientAddress.isNotEmpty;
 
+  bool get hasFundedEthSepoliaWallet =>
+      fundedEthSepoliaMnemonic.isNotEmpty &&
+      fundedEthSepoliaAddress.isNotEmpty &&
+      ethSepoliaTransferRecipientAddress.isNotEmpty;
+
   bool get hasFundedXrpTestnetWallet =>
       fundedXrpTestnetMnemonic.isNotEmpty &&
       fundedXrpTestnetAddress.isNotEmpty &&
       xrpTestnetTransferRecipientAddress.isNotEmpty;
 
   bool get hasAnyFundedWallet =>
-      hasFundedAptTestnetWallet || hasFundedXrpTestnetWallet;
+      hasFundedAptTestnetWallet ||
+      hasFundedEthSepoliaWallet ||
+      hasFundedXrpTestnetWallet;
 
   String? get xrpTestnetTransferDestinationTagOrNull {
     return xrpTestnetTransferDestinationTag.isEmpty
