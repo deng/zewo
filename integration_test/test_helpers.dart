@@ -165,31 +165,47 @@ Future<void> waitForCurrentWalletBalanceGreaterThanZero(
   Duration timeout = const Duration(seconds: 30),
   Duration step = const Duration(seconds: 1),
 }) async {
-  bool hasPositiveBalance(WalletProvider provider, String walletId) {
-    final balanceText = provider.getWalletTotalBalance(walletId).toString();
+  Future<bool> hasPositiveBalance(
+    WalletProvider provider,
+    String walletId,
+  ) async {
+    final balanceText =
+        (await Future<String?>.value(
+          provider.getWalletTotalBalance(walletId),
+        ))?.trim() ??
+        '';
     final balanceValue = double.tryParse(balanceText);
     return balanceValue != null && balanceValue > 0;
   }
 
   final deadline = DateTime.now().add(timeout);
+  Object? lastSyncError;
   while (DateTime.now().isBefore(deadline)) {
     final provider = WalletProvider.getInstance();
     final wallet = provider?.currentWallet;
     if (provider != null && wallet != null) {
-      if (hasPositiveBalance(provider, wallet.id)) {
+      if (await hasPositiveBalance(provider, wallet.id)) {
         return;
       }
       try {
         await BalanceSyncService.instance.syncWallet(wallet.id);
-      } catch (_) {}
-      if (hasPositiveBalance(provider, wallet.id)) {
+      } catch (e) {
+        lastSyncError = e;
+        debugPrint('Failed to sync wallet balance for ${wallet.id}: $e');
+      }
+      if (await hasPositiveBalance(provider, wallet.id)) {
         return;
       }
     }
     await tester.pump(step);
   }
 
-  throw TestFailure('Timed out waiting for current wallet balance to sync');
+  throw TestFailure(
+    lastSyncError == null
+        ? 'Timed out waiting for current wallet balance to sync'
+        : 'Timed out waiting for current wallet balance to sync. '
+              'Last sync error: $lastSyncError',
+  );
 }
 
 Future<String> waitForCurrentWalletNativeAssetBalanceGreaterThanZero(
@@ -210,6 +226,7 @@ Future<String> waitForCurrentWalletNativeAssetBalanceGreaterThanZero(
   }
 
   final deadline = DateTime.now().add(timeout);
+  Object? lastSyncError;
   while (DateTime.now().isBefore(deadline)) {
     final provider = WalletProvider.getInstance();
     final wallet = provider?.currentWallet;
@@ -221,7 +238,12 @@ Future<String> waitForCurrentWalletNativeAssetBalanceGreaterThanZero(
       }
       try {
         await BalanceSyncService.instance.syncWallet(wallet.id);
-      } catch (_) {}
+      } catch (e) {
+        lastSyncError = e;
+        debugPrint(
+          'Failed to sync native asset balance for ${wallet.id} ($symbol): $e',
+        );
+      }
       asset = findNativeAsset(provider, wallet);
       final refreshedBalanceValue = double.tryParse(asset?.balance ?? '');
       if (asset != null &&
@@ -234,7 +256,11 @@ Future<String> waitForCurrentWalletNativeAssetBalanceGreaterThanZero(
   }
 
   throw TestFailure(
-    'Timed out waiting for current wallet native asset $symbol balance to sync',
+    lastSyncError == null
+        ? 'Timed out waiting for current wallet native asset $symbol '
+              'balance to sync'
+        : 'Timed out waiting for current wallet native asset $symbol '
+              'balance to sync. Last sync error: $lastSyncError',
   );
 }
 
