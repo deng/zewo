@@ -64,6 +64,10 @@ void main() {
   "fundedAptTestnetMnemonic": "mnemonic words",
   "fundedAptTestnetAddress": "0xabc",
   "aptTestnetTransferRecipientAddress": "0xdef",
+  "fundedEthSepoliaMnemonic": "eth mnemonic words",
+  "fundedEthSepoliaAddress": "0xethfunded",
+  "ethSepoliaTransferRecipientAddress": "0xethrecipient",
+  "ethSepoliaTransferAmount": "0.0025",
   "fundedXrpTestnetMnemonic": "xrp mnemonic words",
   "fundedXrpTestnetAddress": "rFundedXrpAddress",
   "xrpTestnetTransferRecipientAddress": "rRecipientXrpAddress",
@@ -76,10 +80,15 @@ void main() {
 
     expect(config, isNotNull);
     expect(config!.hasFundedAptTestnetWallet, isTrue);
+    expect(config.hasFundedEthSepoliaWallet, isTrue);
     expect(config.hasFundedXrpTestnetWallet, isTrue);
     expect(config.fundedAptTestnetMnemonic, 'mnemonic words');
     expect(config.fundedAptTestnetAddress, '0xabc');
     expect(config.aptTestnetTransferRecipientAddress, '0xdef');
+    expect(config.fundedEthSepoliaMnemonic, 'eth mnemonic words');
+    expect(config.fundedEthSepoliaAddress, '0xethfunded');
+    expect(config.ethSepoliaTransferRecipientAddress, '0xethrecipient');
+    expect(config.ethSepoliaTransferAmount, '0.0025');
     expect(config.fundedXrpTestnetMnemonic, 'xrp mnemonic words');
     expect(config.fundedXrpTestnetAddress, 'rFundedXrpAddress');
     expect(config.xrpTestnetTransferRecipientAddress, 'rRecipientXrpAddress');
@@ -107,8 +116,34 @@ void main() {
 
     expect(config, isNotNull);
     expect(config!.hasFundedAptTestnetWallet, isFalse);
+    expect(config.hasFundedEthSepoliaWallet, isFalse);
     expect(config.hasFundedXrpTestnetWallet, isTrue);
     expect(config.xrpTestnetTransferAmount, '1');
     expect(config.xrpTestnetTransferDestinationTagOrNull, isNull);
+  });
+
+  test('loads eth-only funded wallet config from local json file', () async {
+    final integrationTestDir = Directory(
+      '${tempDir.path}${Platform.pathSeparator}integration_test',
+    );
+    await integrationTestDir.create(recursive: true);
+    final configFile = File(
+      '${integrationTestDir.path}${Platform.pathSeparator}.test_wallet_config.json',
+    );
+    await configFile.writeAsString('''
+{
+  "fundedEthSepoliaMnemonic": "eth mnemonic words",
+  "fundedEthSepoliaAddress": "0xethfunded",
+  "ethSepoliaTransferRecipientAddress": "0xethrecipient"
+}
+''');
+
+    final config = loadIntegrationTestWalletConfig();
+
+    expect(config, isNotNull);
+    expect(config!.hasFundedAptTestnetWallet, isFalse);
+    expect(config.hasFundedEthSepoliaWallet, isTrue);
+    expect(config.hasFundedXrpTestnetWallet, isFalse);
+    expect(config.ethSepoliaTransferAmount, '0.0001');
   });
 }

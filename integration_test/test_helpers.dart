@@ -14,6 +14,8 @@ const String kInvalidChecksumMnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon';
 const String kValidAptTransferAddress =
     '0x1111111111111111111111111111111111111111111111111111111111111111';
+const String kValidEvmTransferAddress =
+    '0x1111111111111111111111111111111111111111';
 const String kValidXrpTransferAddress = 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe';
 const MethodChannel kToastChannel = MethodChannel('PonnamKarthik/fluttertoast');
 const String kUrlLauncherIosLaunchChannelName =
@@ -163,22 +165,47 @@ Future<void> waitForCurrentWalletBalanceGreaterThanZero(
   Duration timeout = const Duration(seconds: 30),
   Duration step = const Duration(seconds: 1),
 }) async {
+  Future<bool> hasPositiveBalance(
+    WalletProvider provider,
+    String walletId,
+  ) async {
+    final balanceText =
+        (await Future<String?>.value(
+          provider.getWalletTotalBalance(walletId),
+        ))?.trim() ??
+        '';
+    final balanceValue = double.tryParse(balanceText);
+    return balanceValue != null && balanceValue > 0;
+  }
+
   final deadline = DateTime.now().add(timeout);
+  Object? lastSyncError;
   while (DateTime.now().isBefore(deadline)) {
     final provider = WalletProvider.getInstance();
     final wallet = provider?.currentWallet;
     if (provider != null && wallet != null) {
-      await BalanceSyncService.instance.syncWallet(wallet.id);
-      final balanceText = await provider.getWalletTotalBalance(wallet.id);
-      final balanceValue = double.tryParse(balanceText ?? '');
-      if (balanceValue != null && balanceValue > 0) {
+      if (await hasPositiveBalance(provider, wallet.id)) {
+        return;
+      }
+      try {
+        await BalanceSyncService.instance.syncWallet(wallet.id);
+      } catch (e) {
+        lastSyncError = e;
+        debugPrint('Failed to sync wallet balance for ${wallet.id}: $e');
+      }
+      if (await hasPositiveBalance(provider, wallet.id)) {
         return;
       }
     }
     await tester.pump(step);
   }
 
-  throw TestFailure('Timed out waiting for current wallet balance to sync');
+  throw TestFailure(
+    lastSyncError == null
+        ? 'Timed out waiting for current wallet balance to sync'
+        : 'Timed out waiting for current wallet balance to sync. '
+              'Last sync error: $lastSyncError',
+  );
 }
 
 Future<String> waitForCurrentWalletNativeAssetBalanceGreaterThanZero(
@@ -187,23 +214,41 @@ Future<String> waitForCurrentWalletNativeAssetBalanceGreaterThanZero(
   Duration timeout = const Duration(seconds: 30),
   Duration step = const Duration(seconds: 1),
 }) async {
+  dynamic findNativeAsset(WalletProvider provider, WalletInfo wallet) {
+    for (final candidate in provider.getWalletTokenAssets(wallet.id)) {
+      if (candidate.symbol == symbol &&
+          candidate.chainId == wallet.chainId &&
+          candidate.isNative == true) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
   final deadline = DateTime.now().add(timeout);
+  Object? lastSyncError;
   while (DateTime.now().isBefore(deadline)) {
     final provider = WalletProvider.getInstance();
     final wallet = provider?.currentWallet;
     if (provider != null && wallet != null) {
-      await BalanceSyncService.instance.syncWallet(wallet.id);
-      dynamic asset;
-      for (final candidate in provider.getWalletTokenAssets(wallet.id)) {
-        if (candidate.symbol == symbol &&
-            candidate.chainId == wallet.chainId &&
-            candidate.isNative == true) {
-          asset = candidate;
-          break;
-        }
-      }
+      var asset = findNativeAsset(provider, wallet);
       final balanceValue = double.tryParse(asset?.balance ?? '');
       if (asset != null && balanceValue != null && balanceValue > 0) {
+        return asset.balance;
+      }
+      try {
+        await BalanceSyncService.instance.syncWallet(wallet.id);
+      } catch (e) {
+        lastSyncError = e;
+        debugPrint(
+          'Failed to sync native asset balance for ${wallet.id} ($symbol): $e',
+        );
+      }
+      asset = findNativeAsset(provider, wallet);
+      final refreshedBalanceValue = double.tryParse(asset?.balance ?? '');
+      if (asset != null &&
+          refreshedBalanceValue != null &&
+          refreshedBalanceValue > 0) {
         return asset.balance;
       }
     }
@@ -211,7 +256,11 @@ Future<String> waitForCurrentWalletNativeAssetBalanceGreaterThanZero(
   }
 
   throw TestFailure(
-    'Timed out waiting for current wallet native asset $symbol balance to sync',
+    lastSyncError == null
+        ? 'Timed out waiting for current wallet native asset $symbol '
+              'balance to sync'
+        : 'Timed out waiting for current wallet native asset $symbol '
+              'balance to sync. Last sync error: $lastSyncError',
   );
 }
 
@@ -746,6 +795,19 @@ Future<void> createWalletAndAddAptTestnetWallet(
   );
 }
 
+Future<void> createWalletAndAddEthSepoliaWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: '11155111',
+    password: password,
+  );
+}
+
 Future<void> createWalletAndAddXrpTestnetWallet(
   WidgetTester tester, {
   required String walletName,
@@ -776,6 +838,22 @@ Future<void> importWalletAndAddAptTestnetWallet(
     chainId: 'apt_testnet',
     password: password,
   );
+  await pumpUntilWalletHomeReady(tester);
+}
+
+Future<void> importWalletAndAddEthSepoliaWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(tester, chainId: '11155111', password: password);
   await pumpUntilWalletHomeReady(tester);
 }
 
@@ -823,6 +901,16 @@ Future<void> expectXrpTransferPage(WidgetTester tester) async {
   expect(find.byKey(const Key('xrp_transfer_submit_button')), findsOneWidget);
 }
 
+Future<void> expectEvmTransferPage(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('evm_transfer_page_title')),
+  );
+  expect(find.byKey(const Key('evm_transfer_address_field')), findsOneWidget);
+  expect(find.byKey(const Key('evm_transfer_amount_field')), findsOneWidget);
+  expect(find.byKey(const Key('evm_transfer_submit_button')), findsOneWidget);
+}
+
 Future<void> expectAptTransactionStatusPage(WidgetTester tester) async {
   await pumpUntilVisible(
     tester,
@@ -845,6 +933,17 @@ Future<void> expectXrpTransactionStatusPage(WidgetTester tester) async {
   );
 }
 
+Future<void> expectEvmTransactionStatusPage(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('evm_transaction_status_page_title')),
+  );
+  expect(
+    find.byKey(const Key('evm_transaction_status_message')),
+    findsOneWidget,
+  );
+}
+
 Future<String> readAptTransactionHash(WidgetTester tester) async {
   final finder = find.byKey(const Key('apt_transaction_status_tx_hash_value'));
   await pumpUntilVisible(tester, finder);
@@ -855,6 +954,12 @@ Future<String> readXrpTransactionHash(WidgetTester tester) async {
   final finder = find.byKey(const Key('xrp_transaction_status_tx_hash_value'));
   await pumpUntilVisible(tester, finder);
   return tester.widget<SelectableText>(finder).data!;
+}
+
+Future<String> readEvmTransactionHash(WidgetTester tester) async {
+  final finder = find.byKey(const Key('evm_transaction_status_tx_hash_value'));
+  await pumpUntilVisible(tester, finder);
+  return tester.widget<Text>(finder).data!;
 }
 
 Future<void> openAptTransactionLookupFromStatus(WidgetTester tester) async {
@@ -882,6 +987,20 @@ Future<void> openXrpExplorerFromStatusPage(WidgetTester tester) async {
   await scrollToAndTap(
     tester,
     find.byKey(const Key('xrp_transaction_status_open_explorer_button')),
+  );
+}
+
+Future<void> openEvmTransactionLookupFromStatus(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('evm_transaction_status_lookup_button')),
+  );
+}
+
+Future<void> openEvmExplorerFromStatusPage(WidgetTester tester) async {
+  await scrollToAndTap(
+    tester,
+    find.byKey(const Key('evm_transaction_status_open_explorer_button')),
   );
 }
 
@@ -996,6 +1115,25 @@ Future<void> expectXrpTransactionLookupPage(WidgetTester tester) async {
   );
 }
 
+Future<void> expectEvmTransactionLookupPage(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('evm_transaction_lookup_page_title')),
+  );
+  expect(
+    find.byKey(const Key('evm_transaction_lookup_hash_field')),
+    findsOneWidget,
+  );
+  expect(
+    find.byKey(const Key('evm_transaction_lookup_submit_button')),
+    findsOneWidget,
+  );
+  expect(
+    find.byKey(const Key('evm_transaction_lookup_open_explorer_button')),
+    findsOneWidget,
+  );
+}
+
 Future<void> lookupAptTransactionByHash(
   WidgetTester tester, {
   required String txHash,
@@ -1053,10 +1191,42 @@ Future<void> expectXrpLookupHashFieldValue(
   expect(field.controller?.text, txHash);
 }
 
+Future<void> lookupEvmTransactionByHash(
+  WidgetTester tester, {
+  required String txHash,
+}) async {
+  await tester.enterText(
+    find.byKey(const Key('evm_transaction_lookup_hash_field')),
+    txHash,
+  );
+  await unfocusAndPump(tester);
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('evm_transaction_lookup_submit_button')),
+  );
+}
+
+Future<void> expectEvmLookupHashFieldValue(
+  WidgetTester tester, {
+  required String txHash,
+}) async {
+  final field = tester.widget<TextField>(
+    find.byKey(const Key('evm_transaction_lookup_hash_field')),
+  );
+  expect(field.controller?.text, txHash);
+}
+
 Future<void> openXrpExplorerFromLookupPage(WidgetTester tester) async {
   await scrollToAndTap(
     tester,
     find.byKey(const Key('xrp_transaction_lookup_open_explorer_button')),
+  );
+}
+
+Future<void> openEvmExplorerFromLookupPage(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('evm_transaction_lookup_open_explorer_button')),
   );
 }
 
@@ -1099,12 +1269,84 @@ Future<void> fillXrpTransferForm(
   await unfocusAndPump(tester);
 }
 
+Future<void> fillEvmTransferForm(
+  WidgetTester tester, {
+  required String address,
+  required String amount,
+}) async {
+  await tester.enterText(
+    find.byKey(const Key('evm_transfer_address_field')),
+    address,
+  );
+  await tester.enterText(
+    find.byKey(const Key('evm_transfer_amount_field')),
+    amount,
+  );
+  await unfocusAndPump(tester);
+}
+
 Future<void> submitAptTransfer(WidgetTester tester) async {
   await tapAndPump(tester, find.byKey(const Key('apt_transfer_submit_button')));
 }
 
 Future<void> submitXrpTransfer(WidgetTester tester) async {
   await tapAndPump(tester, find.byKey(const Key('xrp_transfer_submit_button')));
+}
+
+Future<void> submitEvmTransfer(
+  WidgetTester tester, {
+  bool waitForConfirmDialog = false,
+  Duration timeout = const Duration(seconds: 20),
+  Duration retryStep = const Duration(seconds: 1),
+}) async {
+  await unfocusAndPump(tester);
+
+  if (!waitForConfirmDialog) {
+    await scrollToAndTap(
+      tester,
+      find.byKey(const Key('evm_transfer_submit_button')),
+    );
+    return;
+  }
+
+  final dialogFinder = find.byKey(
+    const Key('evm_transfer_confirm_dialog_title'),
+  );
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await scrollToAndTap(
+      tester,
+      find.byKey(const Key('evm_transfer_submit_button')),
+    );
+    if (dialogFinder.evaluate().isNotEmpty) {
+      return;
+    }
+    await tester.pump(retryStep);
+  }
+
+  throw TestFailure('Timed out waiting for EVM transfer confirm dialog');
+}
+
+Future<void> expectEvmTransferConfirmDialog(WidgetTester tester) async {
+  await pumpUntilVisible(
+    tester,
+    find.byKey(const Key('evm_transfer_confirm_dialog_title')),
+  );
+  expect(
+    find.byKey(const Key('evm_transfer_confirm_cancel_button')),
+    findsOneWidget,
+  );
+  expect(
+    find.byKey(const Key('evm_transfer_confirm_confirm_button')),
+    findsOneWidget,
+  );
+}
+
+Future<void> confirmEvmTransferDialog(WidgetTester tester) async {
+  await tapAndPump(
+    tester,
+    find.byKey(const Key('evm_transfer_confirm_confirm_button')),
+  );
 }
 
 Future<void> expectPasswordVerificationDialogVisible(
@@ -1203,6 +1445,40 @@ Future<void> waitForXrpTransactionConfirmed(
   );
 }
 
+Future<void> waitForEvmTransactionConfirmed(
+  WidgetTester tester, {
+  Duration timeout = const Duration(minutes: 2),
+  Duration step = const Duration(seconds: 2),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await tester.pump(step);
+
+    final confirmedFinder = find.text('交易已上链确认');
+    if (confirmedFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final failedFinder = find.text('交易执行失败');
+    if (failedFinder.evaluate().isNotEmpty) {
+      final statusMessageFinder = find.byKey(
+        const Key('evm_transaction_status_message'),
+      );
+      String? statusMessage;
+      if (statusMessageFinder.evaluate().isNotEmpty) {
+        statusMessage = tester.widget<Text>(statusMessageFinder).data;
+      }
+      throw TestFailure(
+        statusMessage == null || statusMessage.isEmpty
+            ? 'EVM transaction failed'
+            : 'EVM transaction failed: $statusMessage',
+      );
+    }
+  }
+
+  throw TestFailure('Timed out waiting for EVM transaction confirmation');
+}
+
 Future<void> unlockPasswordPrompt(
   WidgetTester tester, {
   String password = 'Passw0rd!',
@@ -1264,6 +1540,44 @@ Future<void> stopCapturingToastMessages() async {
 void expectLatestToastMessage(List<String> toastMessages, String message) {
   expect(toastMessages, isNotEmpty);
   expect(toastMessages.last, message);
+}
+
+Future<void> waitForToastMessage(
+  WidgetTester tester,
+  List<String> toastMessages, {
+  Duration timeout = const Duration(seconds: 15),
+  Duration step = const Duration(seconds: 1),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    if (toastMessages.isNotEmpty) {
+      return;
+    }
+    await tester.pump(step);
+  }
+
+  throw TestFailure('Timed out waiting for toast message');
+}
+
+Future<void> waitForToastMessageValue(
+  WidgetTester tester,
+  List<String> toastMessages, {
+  required String message,
+  Duration timeout = const Duration(seconds: 15),
+  Duration step = const Duration(seconds: 1),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    if (toastMessages.contains(message)) {
+      return;
+    }
+    await tester.pump(step);
+  }
+
+  throw TestFailure(
+    'Timed out waiting for toast message "$message". '
+    'Observed: $toastMessages',
+  );
 }
 
 Future<void> captureExternalLaunchUrls(List<String> launchedUrls) async {
