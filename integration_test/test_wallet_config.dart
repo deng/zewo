@@ -21,6 +21,10 @@ class IntegrationTestWalletConfig {
     this.xrpTestnetTransferRecipientAddress = '',
     this.xrpTestnetTransferAmount = '1',
     this.xrpTestnetTransferDestinationTag = '',
+    this.fundedSolDevnetMnemonic = '',
+    this.fundedSolDevnetAddress = '',
+    this.solDevnetTransferRecipientAddress = '',
+    this.solDevnetTransferAmount = '0.01',
     this.fundedTrxMnemonic = '',
     this.fundedTrxAddress = '',
     this.trxTransferNetwork = kTrxNetworkNile,
@@ -44,6 +48,10 @@ class IntegrationTestWalletConfig {
   final String xrpTestnetTransferRecipientAddress;
   final String xrpTestnetTransferAmount;
   final String xrpTestnetTransferDestinationTag;
+  final String fundedSolDevnetMnemonic;
+  final String fundedSolDevnetAddress;
+  final String solDevnetTransferRecipientAddress;
+  final String solDevnetTransferAmount;
   final String fundedTrxMnemonic;
   final String fundedTrxAddress;
   final String trxTransferNetwork;
@@ -57,6 +65,7 @@ class IntegrationTestWalletConfig {
   factory IntegrationTestWalletConfig.fromJson(Map<String, dynamic> json) {
     final ethAmount = json['ethSepoliaTransferAmount']?.toString().trim() ?? '';
     final xrpAmount = json['xrpTestnetTransferAmount']?.toString().trim() ?? '';
+    final solAmount = json['solDevnetTransferAmount']?.toString().trim() ?? '';
     final trxNetwork =
         json['trxTransferNetwork']?.toString().trim().toLowerCase() ??
         kTrxNetworkNile;
@@ -90,6 +99,13 @@ class IntegrationTestWalletConfig {
       xrpTestnetTransferAmount: xrpAmount.isEmpty ? '1' : xrpAmount,
       xrpTestnetTransferDestinationTag:
           json['xrpTestnetTransferDestinationTag']?.toString().trim() ?? '',
+      fundedSolDevnetMnemonic:
+          json['fundedSolDevnetMnemonic']?.toString().trim() ?? '',
+      fundedSolDevnetAddress:
+          json['fundedSolDevnetAddress']?.toString().trim() ?? '',
+      solDevnetTransferRecipientAddress:
+          json['solDevnetTransferRecipientAddress']?.toString().trim() ?? '',
+      solDevnetTransferAmount: solAmount.isEmpty ? '0.01' : solAmount,
       fundedTrxMnemonic:
           json['fundedTrxMnemonic']?.toString().trim() ??
           json['fundedTrxMainnetMnemonic']?.toString().trim() ??
@@ -132,6 +148,11 @@ class IntegrationTestWalletConfig {
       fundedXrpTestnetAddress.isNotEmpty &&
       xrpTestnetTransferRecipientAddress.isNotEmpty;
 
+  bool get hasFundedSolDevnetWallet =>
+      fundedSolDevnetMnemonic.isNotEmpty &&
+      fundedSolDevnetAddress.isNotEmpty &&
+      solDevnetTransferRecipientAddress.isNotEmpty;
+
   bool get hasFundedTrxWalletForTransferNetwork =>
       fundedTrxMnemonic.isNotEmpty &&
       fundedTrxAddress.isNotEmpty &&
@@ -155,6 +176,7 @@ class IntegrationTestWalletConfig {
       hasFundedAptTestnetWallet ||
       hasFundedEthSepoliaWallet ||
       hasFundedXrpTestnetWallet ||
+      hasFundedSolDevnetWallet ||
       hasFundedTrxWalletForTransferNetwork;
 
   String? get xrpTestnetTransferDestinationTagOrNull {
