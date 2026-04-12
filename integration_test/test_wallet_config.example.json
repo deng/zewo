@@ -10,5 +10,14 @@
   "fundedXrpTestnetAddress": "rReplaceWithFundedXrpTestnetAddress",
   "xrpTestnetTransferRecipientAddress": "rReplaceWithRecipientAddress",
   "xrpTestnetTransferAmount": "1",
-  "xrpTestnetTransferDestinationTag": ""
+  "xrpTestnetTransferDestinationTag": "",
+  "fundedTrxMainnetMnemonic": "replace with funded trx mainnet mnemonic",
+  "fundedTrxMainnetAddress": "TReplaceWithFundedTrxMainnetAddress",
+  "trxTransferNetwork": "nile",
+  "trxNileTransferRecipientAddress": "TReplaceWithNileRecipientAddress",
+  "trxNileTransferAmount": "1",
+  "trxShastaTransferRecipientAddress": "TReplaceWithShastaRecipientAddress",
+  "trxShastaTransferAmount": "1",
+  "trxMainnetTransferRecipientAddress": "TReplaceWithRecipientAddress",
+  "trxMainnetTransferAmount": "1"
 }

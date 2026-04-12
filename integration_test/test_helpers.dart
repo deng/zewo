@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:wallet/wallet.dart';
 import 'package:zero/main.dart' as app;
+import 'test_wallet_config.dart';
 
 const String kValidImportMnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
@@ -17,6 +18,9 @@ const String kValidAptTransferAddress =
 const String kValidEvmTransferAddress =
     '0x1111111111111111111111111111111111111111';
 const String kValidXrpTransferAddress = 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe';
+const String kValidTrxTransferAddress = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+const String kTrxNileCustomChainId = 'trx_nile';
+const String kTrxShastaCustomChainId = 'trx_shasta';
 const MethodChannel kToastChannel = MethodChannel('PonnamKarthik/fluttertoast');
 const String kUrlLauncherIosLaunchChannelName =
     'dev.flutter.pigeon.url_launcher_ios.UrlLauncherApi.launchUrl';
@@ -821,6 +825,65 @@ Future<void> createWalletAndAddXrpTestnetWallet(
   );
 }
 
+Future<void> createWalletAndAddTrxMainnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: 'trx_mainnet',
+    password: password,
+  );
+}
+
+String trxChainIdForIntegrationNetwork(String network) => switch (network) {
+  kTrxNetworkMainnet => 'trx_mainnet',
+  kTrxNetworkShasta => kTrxShastaCustomChainId,
+  _ => kTrxNileCustomChainId,
+};
+
+String trxExplorerTxBaseUrlForIntegrationNetwork(String network) =>
+    switch (network) {
+      kTrxNetworkMainnet => 'https://tronscan.org/#/transaction/',
+      kTrxNetworkShasta => 'https://shasta.tronscan.org/#/transaction/',
+      _ => 'https://nile.tronscan.org/#/transaction/',
+    };
+
+Future<void> _ensureTrxCustomNetwork({required String network}) async {
+  return;
+}
+
+Future<void> createWalletAndAddTrxNileWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await _ensureTrxCustomNetwork(network: kTrxNetworkNile);
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: kTrxNileCustomChainId,
+    password: password,
+  );
+}
+
+Future<void> createWalletAndAddTrxWalletForNetwork(
+  WidgetTester tester, {
+  required String network,
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await _ensureTrxCustomNetwork(network: network);
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: trxChainIdForIntegrationNetwork(network),
+    password: password,
+  );
+}
+
 Future<void> importWalletAndAddAptTestnetWallet(
   WidgetTester tester, {
   required String walletName,
@@ -877,6 +940,69 @@ Future<void> importWalletAndAddXrpTestnetWallet(
   await pumpUntilWalletHomeReady(tester);
 }
 
+Future<void> importWalletAndAddTrxMainnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(
+    tester,
+    chainId: 'trx_mainnet',
+    password: password,
+  );
+  await pumpUntilWalletHomeReady(tester);
+}
+
+Future<void> importWalletAndAddTrxNileWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await _ensureTrxCustomNetwork(network: kTrxNetworkNile);
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(
+    tester,
+    chainId: kTrxNileCustomChainId,
+    password: password,
+  );
+  await pumpUntilWalletHomeReady(tester);
+}
+
+Future<void> importWalletAndAddTrxWalletForNetwork(
+  WidgetTester tester, {
+  required String network,
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await _ensureTrxCustomNetwork(network: network);
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(
+    tester,
+    chainId: trxChainIdForIntegrationNetwork(network),
+    password: password,
+  );
+  await pumpUntilWalletHomeReady(tester);
+}
+
 Future<void> expectAptTransferPage(WidgetTester tester) async {
   await pumpUntilVisible(
     tester,
@@ -909,6 +1035,24 @@ Future<void> expectEvmTransferPage(WidgetTester tester) async {
   expect(find.byKey(const Key('evm_transfer_address_field')), findsOneWidget);
   expect(find.byKey(const Key('evm_transfer_amount_field')), findsOneWidget);
   expect(find.byKey(const Key('evm_transfer_submit_button')), findsOneWidget);
+}
+
+Future<void> expectTrxTransferPage(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('TRX 转账'));
+  expect(
+    find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField && widget.decoration?.hintText == '请输入 TRON 地址',
+    ),
+    findsOneWidget,
+  );
+  expect(
+    find.byWidgetPredicate(
+      (widget) => widget is FilledButton && widget.child is Text,
+    ),
+    findsWidgets,
+  );
+  expect(find.text('确定'), findsOneWidget);
 }
 
 Future<void> expectAptTransactionStatusPage(WidgetTester tester) async {
@@ -944,6 +1088,11 @@ Future<void> expectEvmTransactionStatusPage(WidgetTester tester) async {
   );
 }
 
+Future<void> expectTrxTransactionStatusPage(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('TRX 转账状态'));
+  expect(find.textContaining('交易'), findsWidgets);
+}
+
 Future<String> readAptTransactionHash(WidgetTester tester) async {
   final finder = find.byKey(const Key('apt_transaction_status_tx_hash_value'));
   await pumpUntilVisible(tester, finder);
@@ -960,6 +1109,22 @@ Future<String> readEvmTransactionHash(WidgetTester tester) async {
   final finder = find.byKey(const Key('evm_transaction_status_tx_hash_value'));
   await pumpUntilVisible(tester, finder);
   return tester.widget<Text>(finder).data!;
+}
+
+Future<String> readTrxTransactionHash(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('TRX 转账状态'));
+  final textElements = find.byType(Text).evaluate();
+  final hashPattern = RegExp(r'^[A-Fa-f0-9]{64}$');
+  for (final element in textElements) {
+    final widget = element.widget;
+    if (widget is Text) {
+      final data = widget.data?.trim();
+      if (data != null && hashPattern.hasMatch(data)) {
+        return data;
+      }
+    }
+  }
+  throw TestFailure('Unable to find TRX transaction hash on status page');
 }
 
 Future<void> openAptTransactionLookupFromStatus(WidgetTester tester) async {
@@ -1002,6 +1167,10 @@ Future<void> openEvmExplorerFromStatusPage(WidgetTester tester) async {
     tester,
     find.byKey(const Key('evm_transaction_status_open_explorer_button')),
   );
+}
+
+Future<void> openTrxExplorerFromStatusPage(WidgetTester tester) async {
+  await scrollToAndTap(tester, find.text('在浏览器中查看'));
 }
 
 Future<void> returnToWalletHomeFromStatusPage(WidgetTester tester) async {
@@ -1285,12 +1454,33 @@ Future<void> fillEvmTransferForm(
   await unfocusAndPump(tester);
 }
 
+Future<void> fillTrxTransferForm(
+  WidgetTester tester, {
+  required String address,
+  required String amount,
+}) async {
+  final addressField = find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField && widget.decoration?.hintText == '请输入 TRON 地址',
+  );
+  final amountField = find.byWidgetPredicate(
+    (widget) => widget is TextField && widget.decoration?.hintText == '0',
+  );
+  await tester.enterText(addressField, address);
+  await tester.enterText(amountField, amount);
+  await unfocusAndPump(tester);
+}
+
 Future<void> submitAptTransfer(WidgetTester tester) async {
   await tapAndPump(tester, find.byKey(const Key('apt_transfer_submit_button')));
 }
 
 Future<void> submitXrpTransfer(WidgetTester tester) async {
   await tapAndPump(tester, find.byKey(const Key('xrp_transfer_submit_button')));
+}
+
+Future<void> submitTrxTransfer(WidgetTester tester) async {
+  await scrollToAndTap(tester, find.text('确定'));
 }
 
 Future<void> submitEvmTransfer(
@@ -1479,6 +1669,29 @@ Future<void> waitForEvmTransactionConfirmed(
   throw TestFailure('Timed out waiting for EVM transaction confirmation');
 }
 
+Future<void> waitForTrxTransactionConfirmed(
+  WidgetTester tester, {
+  Duration timeout = const Duration(minutes: 2),
+  Duration step = const Duration(seconds: 2),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await tester.pump(step);
+
+    final confirmedFinder = find.text('交易已上链确认');
+    if (confirmedFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final failedFinder = find.text('交易执行失败');
+    if (failedFinder.evaluate().isNotEmpty) {
+      throw TestFailure('TRX transaction failed');
+    }
+  }
+
+  throw TestFailure('Timed out waiting for TRX transaction confirmation');
+}
+
 Future<void> unlockPasswordPrompt(
   WidgetTester tester, {
   String password = 'Passw0rd!',
@@ -1514,7 +1727,21 @@ Future<void> addHdWalletByChainId(
     find.byKey(Key('hd_wallet_list_add_subwallet_$chainId')),
     settle: const Duration(seconds: 1),
   );
-  await unlockPasswordPrompt(tester, password: password);
+  final passwordDialogFinder = find.byKey(
+    const Key('password_verification_field'),
+  );
+  final walletHomeFinder = find.byKey(const Key('wallet_home_selector_button'));
+  final deadline = DateTime.now().add(const Duration(seconds: 8));
+  while (DateTime.now().isBefore(deadline)) {
+    if (passwordDialogFinder.evaluate().isNotEmpty) {
+      await unlockPasswordPrompt(tester, password: password);
+      return;
+    }
+    if (walletHomeFinder.evaluate().isNotEmpty) {
+      return;
+    }
+    await tester.pump(const Duration(milliseconds: 200));
+  }
 }
 
 Future<void> captureToastMessages(List<String> toastMessages) async {
