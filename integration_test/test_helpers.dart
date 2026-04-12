@@ -18,7 +18,6 @@ const String kValidAptTransferAddress =
 const String kValidEvmTransferAddress =
     '0x1111111111111111111111111111111111111111';
 const String kValidXrpTransferAddress = 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe';
-const String kValidTrxTransferAddress = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 const String kTrxNileCustomChainId = 'trx_nile';
 const String kTrxShastaCustomChainId = 'trx_shasta';
 const MethodChannel kToastChannel = MethodChannel('PonnamKarthik/fluttertoast');
@@ -825,19 +824,6 @@ Future<void> createWalletAndAddXrpTestnetWallet(
   );
 }
 
-Future<void> createWalletAndAddTrxMainnetWallet(
-  WidgetTester tester, {
-  required String walletName,
-  String password = 'Passw0rd!',
-}) async {
-  await createWalletAndAddHdWallet(
-    tester,
-    walletName: walletName,
-    chainId: 'trx_mainnet',
-    password: password,
-  );
-}
-
 String trxChainIdForIntegrationNetwork(String network) => switch (network) {
   kTrxNetworkMainnet => 'trx_mainnet',
   kTrxNetworkShasta => kTrxShastaCustomChainId,
@@ -856,20 +842,6 @@ Future<void> _ensureTrxCustomNetwork({required String network}) async {
   // app now, so test setup does not need an extra registration step.
   debugPrint('TRX network "$network" already available; no setup required.');
   return;
-}
-
-Future<void> createWalletAndAddTrxNileWallet(
-  WidgetTester tester, {
-  required String walletName,
-  String password = 'Passw0rd!',
-}) async {
-  await _ensureTrxCustomNetwork(network: kTrxNetworkNile);
-  await createWalletAndAddHdWallet(
-    tester,
-    walletName: walletName,
-    chainId: kTrxNileCustomChainId,
-    password: password,
-  );
 }
 
 Future<void> createWalletAndAddTrxWalletForNetwork(
@@ -938,47 +910,6 @@ Future<void> importWalletAndAddXrpTestnetWallet(
   await addHdWalletByChainId(
     tester,
     chainId: 'xrp_testnet',
-    password: password,
-  );
-  await pumpUntilWalletHomeReady(tester);
-}
-
-Future<void> importWalletAndAddTrxMainnetWallet(
-  WidgetTester tester, {
-  required String walletName,
-  required String mnemonic,
-  String password = 'Passw0rd!',
-}) async {
-  await importWalletThenAddNetworks(
-    tester,
-    walletName: walletName,
-    mnemonic: mnemonic,
-    password: password,
-  );
-  await addHdWalletByChainId(
-    tester,
-    chainId: 'trx_mainnet',
-    password: password,
-  );
-  await pumpUntilWalletHomeReady(tester);
-}
-
-Future<void> importWalletAndAddTrxNileWallet(
-  WidgetTester tester, {
-  required String walletName,
-  required String mnemonic,
-  String password = 'Passw0rd!',
-}) async {
-  await _ensureTrxCustomNetwork(network: kTrxNetworkNile);
-  await importWalletThenAddNetworks(
-    tester,
-    walletName: walletName,
-    mnemonic: mnemonic,
-    password: password,
-  );
-  await addHdWalletByChainId(
-    tester,
-    chainId: kTrxNileCustomChainId,
     password: password,
   );
   await pumpUntilWalletHomeReady(tester);
