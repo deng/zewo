@@ -21,8 +21,8 @@ class IntegrationTestWalletConfig {
     this.xrpTestnetTransferRecipientAddress = '',
     this.xrpTestnetTransferAmount = '1',
     this.xrpTestnetTransferDestinationTag = '',
-    this.fundedTrxMainnetMnemonic = '',
-    this.fundedTrxMainnetAddress = '',
+    this.fundedTrxMnemonic = '',
+    this.fundedTrxAddress = '',
     this.trxTransferNetwork = kTrxNetworkNile,
     this.trxNileTransferRecipientAddress = '',
     this.trxNileTransferAmount = '1',
@@ -44,8 +44,8 @@ class IntegrationTestWalletConfig {
   final String xrpTestnetTransferRecipientAddress;
   final String xrpTestnetTransferAmount;
   final String xrpTestnetTransferDestinationTag;
-  final String fundedTrxMainnetMnemonic;
-  final String fundedTrxMainnetAddress;
+  final String fundedTrxMnemonic;
+  final String fundedTrxAddress;
   final String trxTransferNetwork;
   final String trxNileTransferRecipientAddress;
   final String trxNileTransferAmount;
@@ -90,10 +90,14 @@ class IntegrationTestWalletConfig {
       xrpTestnetTransferAmount: xrpAmount.isEmpty ? '1' : xrpAmount,
       xrpTestnetTransferDestinationTag:
           json['xrpTestnetTransferDestinationTag']?.toString().trim() ?? '',
-      fundedTrxMainnetMnemonic:
-          json['fundedTrxMainnetMnemonic']?.toString().trim() ?? '',
-      fundedTrxMainnetAddress:
-          json['fundedTrxMainnetAddress']?.toString().trim() ?? '',
+      fundedTrxMnemonic:
+          json['fundedTrxMnemonic']?.toString().trim() ??
+          json['fundedTrxMainnetMnemonic']?.toString().trim() ??
+          '',
+      fundedTrxAddress:
+          json['fundedTrxAddress']?.toString().trim() ??
+          json['fundedTrxMainnetAddress']?.toString().trim() ??
+          '',
       trxTransferNetwork: switch (trxNetwork) {
         kTrxNetworkNile ||
         kTrxNetworkShasta ||
@@ -128,9 +132,9 @@ class IntegrationTestWalletConfig {
       fundedXrpTestnetAddress.isNotEmpty &&
       xrpTestnetTransferRecipientAddress.isNotEmpty;
 
-  bool get hasFundedTrxMainnetWallet =>
-      fundedTrxMainnetMnemonic.isNotEmpty &&
-      fundedTrxMainnetAddress.isNotEmpty &&
+  bool get hasFundedTrxWalletForTransferNetwork =>
+      fundedTrxMnemonic.isNotEmpty &&
+      fundedTrxAddress.isNotEmpty &&
       trxTransferRecipientAddress.isNotEmpty;
 
   String get trxTransferRecipientAddress => switch (trxTransferNetwork) {
@@ -151,7 +155,7 @@ class IntegrationTestWalletConfig {
       hasFundedAptTestnetWallet ||
       hasFundedEthSepoliaWallet ||
       hasFundedXrpTestnetWallet ||
-      hasFundedTrxMainnetWallet;
+      hasFundedTrxWalletForTransferNetwork;
 
   String? get xrpTestnetTransferDestinationTagOrNull {
     return xrpTestnetTransferDestinationTag.isEmpty

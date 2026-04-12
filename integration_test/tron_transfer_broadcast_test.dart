@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wallet/wallet.dart';
 
@@ -8,22 +9,22 @@ void main() {
   configureIntegrationTest();
 
   final walletConfig = loadIntegrationTestWalletConfig();
-  final toastMessages = <String>[];
+  final launchedUrls = <String>[];
 
   setUp(() async {
-    await captureToastMessages(toastMessages);
+    await captureExternalLaunchUrls(launchedUrls);
   });
 
   tearDown(() async {
-    await stopCapturingToastMessages();
+    await stopCapturingExternalLaunchUrls();
   });
 
   testWidgets(
-    'cancels tron mainnet transfer at password prompt and stays on transfer page',
+    'broadcasts a real tron ${walletConfig?.trxTransferNetwork ?? 'configured'} transfer with funded wallet',
     (tester) async {
       final config = walletConfig;
       expect(config, isNotNull);
-      expect(config!.hasFundedTrxMainnetWallet, isTrue);
+      expect(config!.hasFundedTrxWalletForTransferNetwork, isTrue);
       final trxNetwork = config.trxTransferNetwork;
 
       await launchTestApp();
@@ -31,8 +32,8 @@ void main() {
       await importWalletAndAddTrxWalletForNetwork(
         tester,
         network: trxNetwork,
-        walletName: 'TRON Cancel',
-        mnemonic: config.fundedTrxMainnetMnemonic,
+        walletName: 'TRON Funded',
+        mnemonic: config.fundedTrxMnemonic,
       );
 
       final currentWallet = WalletProvider.getInstance()?.currentWallet;
@@ -41,6 +42,7 @@ void main() {
         currentWallet!.chainId,
         trxChainIdForIntegrationNetwork(trxNetwork),
       );
+      expect(currentWallet.defaultAddress?.address, config.fundedTrxAddress);
 
       await waitForCurrentWalletNativeAssetBalanceGreaterThanZero(
         tester,
@@ -50,7 +52,6 @@ void main() {
       await openTransferFromWalletHome(tester);
       await expectTrxTransferPage(tester);
 
-      toastMessages.clear();
       await fillTrxTransferForm(
         tester,
         address: config.trxTransferRecipientAddress,
@@ -59,10 +60,28 @@ void main() {
       await submitTrxTransfer(tester);
 
       await expectPasswordVerificationDialogVisible(tester);
-      await cancelPasswordVerificationDialog(tester);
-      await expectTrxTransferPage(tester);
-      expect(find.text('TRX 转账状态'), findsNothing);
+      await unlockPasswordPrompt(tester);
+
+      await expectTrxTransactionStatusPage(tester);
+      await waitForTrxTransactionConfirmed(tester);
+
+      final txHash = await readTrxTransactionHash(tester);
+      expect(RegExp(r'^[A-Fa-f0-9]{64}$').hasMatch(txHash), isTrue);
+
+      await openTrxExplorerFromStatusPage(tester);
+      expectLatestExternalLaunchUrl(
+        launchedUrls,
+        '${trxExplorerTxBaseUrlForIntegrationNetwork(trxNetwork)}$txHash',
+      );
+
+      await returnToWalletHomeFromStatusPage(tester);
+      await pumpUntilVisible(
+        tester,
+        find.byKey(const Key('wallet_home_selector_button')),
+      );
     },
-    skip: walletConfig == null || !walletConfig.hasFundedTrxMainnetWallet,
+    skip:
+        walletConfig == null ||
+        !walletConfig.hasFundedTrxWalletForTransferNetwork,
   );
 }

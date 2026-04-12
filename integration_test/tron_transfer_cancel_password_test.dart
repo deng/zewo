@@ -19,11 +19,11 @@ void main() {
   });
 
   testWidgets(
-    'rejects tron mainnet transfer when password is wrong',
+    'cancels tron transfer on configured network at password prompt and stays on transfer page',
     (tester) async {
       final config = walletConfig;
       expect(config, isNotNull);
-      expect(config!.hasFundedTrxMainnetWallet, isTrue);
+      expect(config!.hasFundedTrxWalletForTransferNetwork, isTrue);
       final trxNetwork = config.trxTransferNetwork;
 
       await launchTestApp();
@@ -31,8 +31,8 @@ void main() {
       await importWalletAndAddTrxWalletForNetwork(
         tester,
         network: trxNetwork,
-        walletName: 'TRON Wrong',
-        mnemonic: config.fundedTrxMainnetMnemonic,
+        walletName: 'TRON Cancel',
+        mnemonic: config.fundedTrxMnemonic,
       );
 
       final currentWallet = WalletProvider.getInstance()?.currentWallet;
@@ -59,15 +59,12 @@ void main() {
       await submitTrxTransfer(tester);
 
       await expectPasswordVerificationDialogVisible(tester);
-      await unlockPasswordPrompt(tester, password: 'WrongPass1!');
-      await waitForToastMessage(tester, toastMessages);
-      expect(
-        toastMessages.any((message) => message.contains('密码错误，请重试')),
-        isTrue,
-      );
+      await cancelPasswordVerificationDialog(tester);
       await expectTrxTransferPage(tester);
       expect(find.text('TRX 转账状态'), findsNothing);
     },
-    skip: walletConfig == null || !walletConfig.hasFundedTrxMainnetWallet,
+    skip:
+        walletConfig == null ||
+        !walletConfig.hasFundedTrxWalletForTransferNetwork,
   );
 }

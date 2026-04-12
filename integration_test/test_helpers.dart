@@ -852,6 +852,9 @@ String trxExplorerTxBaseUrlForIntegrationNetwork(String network) =>
     };
 
 Future<void> _ensureTrxCustomNetwork({required String network}) async {
+  // Intentionally a no-op: Nile and Shasta are built-in TRON networks in the
+  // app now, so test setup does not need an extra registration step.
+  debugPrint('TRX network "$network" already available; no setup required.');
   return;
 }
 
@@ -1742,6 +1745,11 @@ Future<void> addHdWalletByChainId(
     }
     await tester.pump(const Duration(milliseconds: 200));
   }
+
+  throw TestFailure(
+    'Timed out while adding HD wallet for chainId "$chainId": '
+    'neither the password verification dialog nor the wallet home appeared.',
+  );
 }
 
 Future<void> captureToastMessages(List<String> toastMessages) async {
