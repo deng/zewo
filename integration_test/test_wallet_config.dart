@@ -3,6 +3,9 @@ import 'dart:io';
 
 const String kIntegrationTestWalletConfigEnvVar =
     'ZERO_ITEST_WALLET_CONFIG_B64';
+const String kTrxNetworkNile = 'nile';
+const String kTrxNetworkShasta = 'shasta';
+const String kTrxNetworkMainnet = 'mainnet';
 
 class IntegrationTestWalletConfig {
   const IntegrationTestWalletConfig({
@@ -18,6 +21,15 @@ class IntegrationTestWalletConfig {
     this.xrpTestnetTransferRecipientAddress = '',
     this.xrpTestnetTransferAmount = '1',
     this.xrpTestnetTransferDestinationTag = '',
+    this.fundedTrxMnemonic = '',
+    this.fundedTrxAddress = '',
+    this.trxTransferNetwork = kTrxNetworkNile,
+    this.trxNileTransferRecipientAddress = '',
+    this.trxNileTransferAmount = '1',
+    this.trxShastaTransferRecipientAddress = '',
+    this.trxShastaTransferAmount = '1',
+    this.trxMainnetTransferRecipientAddress = '',
+    this.trxMainnetTransferAmount = '1',
   });
 
   final String fundedAptTestnetMnemonic;
@@ -32,10 +44,29 @@ class IntegrationTestWalletConfig {
   final String xrpTestnetTransferRecipientAddress;
   final String xrpTestnetTransferAmount;
   final String xrpTestnetTransferDestinationTag;
+  final String fundedTrxMnemonic;
+  final String fundedTrxAddress;
+  final String trxTransferNetwork;
+  final String trxNileTransferRecipientAddress;
+  final String trxNileTransferAmount;
+  final String trxShastaTransferRecipientAddress;
+  final String trxShastaTransferAmount;
+  final String trxMainnetTransferRecipientAddress;
+  final String trxMainnetTransferAmount;
 
   factory IntegrationTestWalletConfig.fromJson(Map<String, dynamic> json) {
     final ethAmount = json['ethSepoliaTransferAmount']?.toString().trim() ?? '';
     final xrpAmount = json['xrpTestnetTransferAmount']?.toString().trim() ?? '';
+    final trxNetwork =
+        json['trxTransferNetwork']?.toString().trim().toLowerCase() ??
+        kTrxNetworkNile;
+    final trxNileAmount =
+        json['trxNileTransferAmount']?.toString().trim() ?? '';
+    final trxShastaAmount =
+        json['trxShastaTransferAmount']?.toString().trim() ?? '';
+    final trxAmount = json['trxMainnetTransferAmount']?.toString().trim() ?? '';
+    final trxDefaultRecipient =
+        json['trxMainnetTransferRecipientAddress']?.toString().trim() ?? '';
     return IntegrationTestWalletConfig(
       fundedAptTestnetMnemonic:
           json['fundedAptTestnetMnemonic']?.toString().trim() ?? '',
@@ -59,6 +90,30 @@ class IntegrationTestWalletConfig {
       xrpTestnetTransferAmount: xrpAmount.isEmpty ? '1' : xrpAmount,
       xrpTestnetTransferDestinationTag:
           json['xrpTestnetTransferDestinationTag']?.toString().trim() ?? '',
+      fundedTrxMnemonic:
+          json['fundedTrxMnemonic']?.toString().trim() ??
+          json['fundedTrxMainnetMnemonic']?.toString().trim() ??
+          '',
+      fundedTrxAddress:
+          json['fundedTrxAddress']?.toString().trim() ??
+          json['fundedTrxMainnetAddress']?.toString().trim() ??
+          '',
+      trxTransferNetwork: switch (trxNetwork) {
+        kTrxNetworkNile ||
+        kTrxNetworkShasta ||
+        kTrxNetworkMainnet => trxNetwork,
+        _ => kTrxNetworkNile,
+      },
+      trxNileTransferRecipientAddress:
+          json['trxNileTransferRecipientAddress']?.toString().trim() ??
+          trxDefaultRecipient,
+      trxNileTransferAmount: trxNileAmount.isEmpty ? '1' : trxNileAmount,
+      trxShastaTransferRecipientAddress:
+          json['trxShastaTransferRecipientAddress']?.toString().trim() ??
+          trxDefaultRecipient,
+      trxShastaTransferAmount: trxShastaAmount.isEmpty ? '1' : trxShastaAmount,
+      trxMainnetTransferRecipientAddress: trxDefaultRecipient,
+      trxMainnetTransferAmount: trxAmount.isEmpty ? '1' : trxAmount,
     );
   }
 
@@ -77,10 +132,30 @@ class IntegrationTestWalletConfig {
       fundedXrpTestnetAddress.isNotEmpty &&
       xrpTestnetTransferRecipientAddress.isNotEmpty;
 
+  bool get hasFundedTrxWalletForTransferNetwork =>
+      fundedTrxMnemonic.isNotEmpty &&
+      fundedTrxAddress.isNotEmpty &&
+      trxTransferRecipientAddress.isNotEmpty;
+
+  String get trxTransferRecipientAddress => switch (trxTransferNetwork) {
+    kTrxNetworkNile => trxNileTransferRecipientAddress,
+    kTrxNetworkShasta => trxShastaTransferRecipientAddress,
+    kTrxNetworkMainnet => trxMainnetTransferRecipientAddress,
+    _ => trxNileTransferRecipientAddress,
+  };
+
+  String get trxTransferAmount => switch (trxTransferNetwork) {
+    kTrxNetworkNile => trxNileTransferAmount,
+    kTrxNetworkShasta => trxShastaTransferAmount,
+    kTrxNetworkMainnet => trxMainnetTransferAmount,
+    _ => trxNileTransferAmount,
+  };
+
   bool get hasAnyFundedWallet =>
       hasFundedAptTestnetWallet ||
       hasFundedEthSepoliaWallet ||
-      hasFundedXrpTestnetWallet;
+      hasFundedXrpTestnetWallet ||
+      hasFundedTrxWalletForTransferNetwork;
 
   String? get xrpTestnetTransferDestinationTagOrNull {
     return xrpTestnetTransferDestinationTag.isEmpty

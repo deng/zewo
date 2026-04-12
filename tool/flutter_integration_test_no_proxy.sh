@@ -22,17 +22,20 @@ done
 
 DART_DEFINE_ARGS=()
 DART_DEFINE_FILE=""
+TMP_WORK_DIR=""
+TMPDIR_ROOT="${TMPDIR:-/tmp}"
+TMP_WORK_DIR="$(mktemp -d "$TMPDIR_ROOT/flutter-integration-test.XXXXXX")"
 if [ -n "$CONFIG_PATH" ]; then
   CONFIG_B64="$(base64 < "$CONFIG_PATH" | tr -d '\r\n')"
-  DART_DEFINE_FILE="$(mktemp "${TMPDIR:-/tmp}/flutter-dart-defines.XXXXXX.json")"
-  chmod 600 "$DART_DEFINE_FILE"
+  DART_DEFINE_FILE="$TMP_WORK_DIR/flutter-dart-defines.json"
   printf '{"ZERO_ITEST_WALLET_CONFIG_B64":"%s"}\n' "$CONFIG_B64" > "$DART_DEFINE_FILE"
+  chmod 600 "$DART_DEFINE_FILE"
   DART_DEFINE_ARGS+=("--dart-define-from-file=$DART_DEFINE_FILE")
 fi
 
 cleanup() {
-  if [ -n "${DART_DEFINE_FILE:-}" ] && [ -f "$DART_DEFINE_FILE" ]; then
-    rm -f "$DART_DEFINE_FILE"
+  if [ -n "${TMP_WORK_DIR:-}" ] && [ -d "$TMP_WORK_DIR" ]; then
+    rm -rf "$TMP_WORK_DIR"
   fi
 }
 
@@ -50,7 +53,7 @@ run_flutter_test() {
     -u HTTPS_PROXY \
     -u no_proxy \
     -u NO_PROXY \
-    flutter test "${DART_DEFINE_ARGS[@]}" "${TARGETS[@]}" 2>&1 | tee "$log_file"
+    flutter test --no-pub "${DART_DEFINE_ARGS[@]}" "${TARGETS[@]}" 2>&1 | tee "$log_file"
   local rc=${PIPESTATUS[0]}
   set -e
   return "$rc"
@@ -60,7 +63,7 @@ attempt=1
 max_attempts=2
 
 while true; do
-  log_file="$(mktemp "${TMPDIR:-/tmp}/flutter-integration-test.XXXXXX.log")"
+  log_file="$TMP_WORK_DIR/flutter-integration-test.$attempt.log"
   if run_flutter_test "$log_file"; then
     rm -f "$log_file"
     exit 0
