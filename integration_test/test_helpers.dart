@@ -837,6 +837,19 @@ Future<void> createWalletAndAddSolDevnetWallet(
   );
 }
 
+Future<void> createWalletAndAddTonTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: 'ton_testnet',
+    password: password,
+  );
+}
+
 String trxChainIdForIntegrationNetwork(String network) => switch (network) {
   kTrxNetworkMainnet => 'trx_mainnet',
   kTrxNetworkShasta => kTrxShastaCustomChainId,
@@ -944,6 +957,26 @@ Future<void> importWalletAndAddSolDevnetWallet(
   await pumpUntilWalletHomeReady(tester);
 }
 
+Future<void> importWalletAndAddTonTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(
+    tester,
+    chainId: 'ton_testnet',
+    password: password,
+  );
+  await pumpUntilWalletHomeReady(tester);
+}
+
 Future<void> importWalletAndAddTrxWalletForNetwork(
   WidgetTester tester, {
   required String network,
@@ -1030,6 +1063,18 @@ Future<void> expectSolTransferPage(WidgetTester tester) async {
   expect(find.text('确定'), findsOneWidget);
 }
 
+Future<void> expectTonTransferPage(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('TON 转账'));
+  expect(
+    find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField && widget.decoration?.hintText == 'EQ... 或 0:...',
+    ),
+    findsOneWidget,
+  );
+  expect(find.text('发送 TON'), findsOneWidget);
+}
+
 Future<void> expectAptTransactionStatusPage(WidgetTester tester) async {
   await pumpUntilVisible(
     tester,
@@ -1074,6 +1119,14 @@ Future<void> expectSolTransactionStatusPage(
 }) async {
   await pumpUntilVisible(tester, find.text('SOL 转账状态'), timeout: timeout);
   expect(find.textContaining('交易'), findsWidgets);
+}
+
+Future<void> expectTonTransactionStatusPage(
+  WidgetTester tester, {
+  Duration timeout = const Duration(seconds: 20),
+}) async {
+  await pumpUntilVisible(tester, find.text('TON 交易结果'), timeout: timeout);
+  expect(find.textContaining('消息哈希'), findsOneWidget);
 }
 
 Future<String> readAptTransactionHash(WidgetTester tester) async {
@@ -1126,6 +1179,29 @@ Future<String> readSolTransactionSignature(WidgetTester tester) async {
   throw TestFailure('Unable to find SOL transaction signature on status page');
 }
 
+Future<String> readTonTransactionLookupHash(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('TON 交易结果'));
+  const preferredKeys = <Key>[
+    Key('ton_transaction_status_final_hash_value'),
+    Key('ton_transaction_status_normalized_lookup_hash_value'),
+    Key('ton_transaction_status_lookup_hash_value'),
+  ];
+  for (final key in preferredKeys) {
+    final finder = find.byKey(key);
+    if (finder.evaluate().isEmpty) {
+      continue;
+    }
+    final widget = tester.widget<SelectableText>(finder);
+    final data = widget.data?.trim();
+    if (data != null && data.isNotEmpty) {
+      return data;
+    }
+  }
+  throw TestFailure(
+    'Unable to find TON transaction lookup hash on status page',
+  );
+}
+
 Future<void> openAptTransactionLookupFromStatus(WidgetTester tester) async {
   await tapAndPump(
     tester,
@@ -1170,6 +1246,13 @@ Future<void> openEvmExplorerFromStatusPage(WidgetTester tester) async {
 
 Future<void> openTrxExplorerFromStatusPage(WidgetTester tester) async {
   await scrollToAndTap(tester, find.text('在浏览器中查看'));
+}
+
+Future<void> openTonExplorerFromStatusPage(WidgetTester tester) async {
+  await scrollToAndTap(
+    tester,
+    find.byKey(const Key('ton_transaction_status_open_explorer_button')),
+  );
 }
 
 Future<void> returnToWalletHomeFromStatusPage(WidgetTester tester) async {
@@ -1487,6 +1570,23 @@ Future<void> fillSolTransferForm(
   await unfocusAndPump(tester);
 }
 
+Future<void> fillTonTransferForm(
+  WidgetTester tester, {
+  required String address,
+  required String amount,
+}) async {
+  final addressField = find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField && widget.decoration?.hintText == 'EQ... 或 0:...',
+  );
+  final amountField = find.byWidgetPredicate(
+    (widget) => widget is TextField && widget.decoration?.hintText == '0',
+  );
+  await tester.enterText(addressField, address);
+  await tester.enterText(amountField, amount);
+  await unfocusAndPump(tester);
+}
+
 Future<void> submitAptTransfer(WidgetTester tester) async {
   await tapAndPump(tester, find.byKey(const Key('apt_transfer_submit_button')));
 }
@@ -1501,6 +1601,10 @@ Future<void> submitTrxTransfer(WidgetTester tester) async {
 
 Future<void> submitSolTransfer(WidgetTester tester) async {
   await scrollToAndTap(tester, find.text('确定'));
+}
+
+Future<void> submitTonTransfer(WidgetTester tester) async {
+  await scrollToAndTap(tester, find.text('发送 TON'));
 }
 
 Future<void> submitEvmTransfer(
@@ -1734,6 +1838,31 @@ Future<void> waitForSolTransactionConfirmed(
 
   throw TestFailure(
     'Timed out waiting for SOL devnet transaction confirmation',
+  );
+}
+
+Future<void> waitForTonTransactionConfirmed(
+  WidgetTester tester, {
+  Duration timeout = const Duration(minutes: 2),
+  Duration step = const Duration(seconds: 2),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await tester.pump(step);
+
+    final confirmedFinder = find.text('交易已上链确认');
+    if (confirmedFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final failedFinder = find.text('交易已上链，但执行失败');
+    if (failedFinder.evaluate().isNotEmpty) {
+      throw TestFailure('TON testnet transaction failed');
+    }
+  }
+
+  throw TestFailure(
+    'Timed out waiting for TON testnet transaction confirmation',
   );
 }
 
