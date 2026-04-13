@@ -1186,16 +1186,25 @@ Future<String> readTonTransactionLookupHash(WidgetTester tester) async {
     Key('ton_transaction_status_normalized_lookup_hash_value'),
     Key('ton_transaction_status_lookup_hash_value'),
   ];
-  for (final key in preferredKeys) {
-    final finder = find.byKey(key);
-    if (finder.evaluate().isEmpty) {
-      continue;
+  final deadline = tester.binding.clock.fromNowBy(const Duration(seconds: 5));
+  while (true) {
+    for (final key in preferredKeys) {
+      final finder = find.byKey(key);
+      if (finder.evaluate().isEmpty) {
+        continue;
+      }
+      final widget = tester.widget<SelectableText>(finder);
+      final data = widget.data?.trim();
+      if (data != null && data.isNotEmpty) {
+        return data;
+      }
     }
-    final widget = tester.widget<SelectableText>(finder);
-    final data = widget.data?.trim();
-    if (data != null && data.isNotEmpty) {
-      return data;
+
+    if (!tester.binding.clock.now().isBefore(deadline)) {
+      break;
     }
+
+    await tester.pump(const Duration(milliseconds: 100));
   }
   throw TestFailure(
     'Unable to find TON transaction lookup hash on status page',
