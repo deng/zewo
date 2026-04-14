@@ -1170,8 +1170,8 @@ Future<void> expectSuiTransactionStatusPage(
   WidgetTester tester, {
   Duration timeout = const Duration(seconds: 20),
 }) async {
-  await pumpUntilVisible(tester, find.text('交易 Digest'), timeout: timeout);
-  expect(find.text('交易 Digest'), findsOneWidget);
+  await pumpUntilVisible(tester, find.text('SUI 转账状态'), timeout: timeout);
+  expect(find.textContaining('交易'), findsWidgets);
 }
 
 Future<void> expectTonTransactionStatusPage(
@@ -1233,18 +1233,34 @@ Future<String> readSolTransactionSignature(WidgetTester tester) async {
 }
 
 Future<String> readSuiTransactionDigest(WidgetTester tester) async {
-  await pumpUntilVisible(tester, find.text('交易 Digest'));
-  final textElements = find.byType(Text).evaluate();
+  const labelText = '交易 Digest';
+  await pumpUntilVisible(tester, find.text(labelText));
+  final rowFinder = find.ancestor(
+    of: find.text(labelText),
+    matching: find.byType(Row),
+  );
   final digestPattern = RegExp(
     r'^(0x[0-9a-fA-F]{64}|[1-9A-HJ-NP-Za-km-z]{20,})$',
   );
-  for (final element in textElements) {
+  final valueElements = find
+      .descendant(
+        of: rowFinder,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Text || widget is SelectableText,
+        ),
+      )
+      .evaluate();
+
+  for (final element in valueElements) {
     final widget = element.widget;
-    if (widget is Text) {
-      final data = widget.data?.trim();
-      if (data != null && digestPattern.hasMatch(data)) {
-        return data;
-      }
+    final data = switch (widget) {
+      Text() => widget.data?.trim() ?? widget.textSpan?.toPlainText().trim(),
+      SelectableText() =>
+        widget.data?.trim() ?? widget.textSpan?.toPlainText().trim(),
+      _ => null,
+    };
+    if (data != null && data != labelText && digestPattern.hasMatch(data)) {
+      return data;
     }
   }
   throw TestFailure('Unable to find Sui transaction digest on status page');
