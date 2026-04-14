@@ -9,6 +9,10 @@ const String kTrxNetworkMainnet = 'mainnet';
 
 class IntegrationTestWalletConfig {
   const IntegrationTestWalletConfig({
+    this.fundedBtcTestnetMnemonic = '',
+    this.fundedBtcTestnetAddress = '',
+    this.btcTestnetTransferRecipientAddress = '',
+    this.btcTestnetTransferAmount = '0.0001',
     required this.fundedAptTestnetMnemonic,
     required this.fundedAptTestnetAddress,
     required this.aptTestnetTransferRecipientAddress,
@@ -44,6 +48,10 @@ class IntegrationTestWalletConfig {
     this.trxMainnetTransferAmount = '1',
   });
 
+  final String fundedBtcTestnetMnemonic;
+  final String fundedBtcTestnetAddress;
+  final String btcTestnetTransferRecipientAddress;
+  final String btcTestnetTransferAmount;
   final String fundedAptTestnetMnemonic;
   final String fundedAptTestnetAddress;
   final String aptTestnetTransferRecipientAddress;
@@ -79,6 +87,7 @@ class IntegrationTestWalletConfig {
   final String trxMainnetTransferAmount;
 
   factory IntegrationTestWalletConfig.fromJson(Map<String, dynamic> json) {
+    final btcAmount = json['btcTestnetTransferAmount']?.toString().trim() ?? '';
     final ethAmount = json['ethSepoliaTransferAmount']?.toString().trim() ?? '';
     final xrpAmount = json['xrpTestnetTransferAmount']?.toString().trim() ?? '';
     final solAmount = json['solDevnetTransferAmount']?.toString().trim() ?? '';
@@ -95,6 +104,13 @@ class IntegrationTestWalletConfig {
     final trxDefaultRecipient =
         json['trxMainnetTransferRecipientAddress']?.toString().trim() ?? '';
     return IntegrationTestWalletConfig(
+      fundedBtcTestnetMnemonic:
+          json['fundedBtcTestnetMnemonic']?.toString().trim() ?? '',
+      fundedBtcTestnetAddress:
+          json['fundedBtcTestnetAddress']?.toString().trim() ?? '',
+      btcTestnetTransferRecipientAddress:
+          json['btcTestnetTransferRecipientAddress']?.toString().trim() ?? '',
+      btcTestnetTransferAmount: btcAmount.isEmpty ? '0.0001' : btcAmount,
       fundedAptTestnetMnemonic:
           json['fundedAptTestnetMnemonic']?.toString().trim() ?? '',
       fundedAptTestnetAddress:
@@ -165,6 +181,11 @@ class IntegrationTestWalletConfig {
     );
   }
 
+  bool get hasFundedBtcTestnetWallet =>
+      fundedBtcTestnetMnemonic.isNotEmpty &&
+      fundedBtcTestnetAddress.isNotEmpty &&
+      btcTestnetTransferRecipientAddress.isNotEmpty;
+
   bool get hasFundedAptTestnetWallet =>
       fundedAptTestnetMnemonic.isNotEmpty &&
       fundedAptTestnetAddress.isNotEmpty &&
@@ -215,6 +236,7 @@ class IntegrationTestWalletConfig {
   };
 
   bool get hasAnyFundedWallet =>
+      hasFundedBtcTestnetWallet ||
       hasFundedAptTestnetWallet ||
       hasFundedEthSepoliaWallet ||
       hasFundedXrpTestnetWallet ||
