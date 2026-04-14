@@ -18,6 +18,8 @@ const String kValidAptTransferAddress =
 const String kValidEvmTransferAddress =
     '0x1111111111111111111111111111111111111111';
 const String kValidXrpTransferAddress = 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe';
+const String kBtcTestnetChainId =
+    '000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943';
 const String kTrxNileCustomChainId = 'trx_nile';
 const String kTrxShastaCustomChainId = 'trx_shasta';
 const MethodChannel kToastChannel = MethodChannel('PonnamKarthik/fluttertoast');
@@ -264,6 +266,60 @@ Future<String> waitForCurrentWalletNativeAssetBalanceGreaterThanZero(
               'balance to sync'
         : 'Timed out waiting for current wallet native asset $symbol '
               'balance to sync. Last sync error: $lastSyncError',
+  );
+}
+
+Future<String> waitForCurrentWalletNativeAssetBalanceGreaterThanZeroForChain(
+  WidgetTester tester, {
+  required String chainId,
+  Duration timeout = const Duration(seconds: 30),
+  Duration step = const Duration(seconds: 1),
+}) async {
+  dynamic findNativeAsset(WalletProvider provider, WalletInfo wallet) {
+    for (final candidate in provider.getWalletTokenAssets(wallet.id)) {
+      if (candidate.chainId == chainId && candidate.isNative == true) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  final deadline = DateTime.now().add(timeout);
+  Object? lastSyncError;
+  while (DateTime.now().isBefore(deadline)) {
+    final provider = WalletProvider.getInstance();
+    final wallet = provider?.currentWallet;
+    if (provider != null && wallet != null) {
+      var asset = findNativeAsset(provider, wallet);
+      final balanceValue = double.tryParse(asset?.balance ?? '');
+      if (asset != null && balanceValue != null && balanceValue > 0) {
+        return asset.balance;
+      }
+      try {
+        await BalanceSyncService.instance.syncWallet(wallet.id);
+      } catch (e) {
+        lastSyncError = e;
+        debugPrint(
+          'Failed to sync native asset balance for ${wallet.id} ($chainId): $e',
+        );
+      }
+      asset = findNativeAsset(provider, wallet);
+      final refreshedBalanceValue = double.tryParse(asset?.balance ?? '');
+      if (asset != null &&
+          refreshedBalanceValue != null &&
+          refreshedBalanceValue > 0) {
+        return asset.balance;
+      }
+    }
+    await tester.pump(step);
+  }
+
+  throw TestFailure(
+    lastSyncError == null
+        ? 'Timed out waiting for current wallet native asset balance for '
+              '$chainId to sync'
+        : 'Timed out waiting for current wallet native asset balance for '
+              '$chainId to sync. Last sync error: $lastSyncError',
   );
 }
 
@@ -798,6 +854,19 @@ Future<void> createWalletAndAddAptTestnetWallet(
   );
 }
 
+Future<void> createWalletAndAddBtcTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: kBtcTestnetChainId,
+    password: password,
+  );
+}
+
 Future<void> createWalletAndAddEthSepoliaWallet(
   WidgetTester tester, {
   required String walletName,
@@ -913,6 +982,26 @@ Future<void> importWalletAndAddAptTestnetWallet(
   await addHdWalletByChainId(
     tester,
     chainId: 'apt_testnet',
+    password: password,
+  );
+  await pumpUntilWalletHomeReady(tester);
+}
+
+Future<void> importWalletAndAddBtcTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(
+    tester,
+    chainId: kBtcTestnetChainId,
     password: password,
   );
   await pumpUntilWalletHomeReady(tester);
@@ -1042,6 +1131,18 @@ Future<void> expectAptTransferPage(WidgetTester tester) async {
   expect(find.byKey(const Key('apt_transfer_submit_button')), findsOneWidget);
 }
 
+Future<void> expectBtcTransferPage(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('输入或粘贴钱包地址'));
+  expect(
+    find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField && widget.decoration?.hintText == '输入或粘贴钱包地址',
+    ),
+    findsOneWidget,
+  );
+  expect(find.text('确定'), findsWidgets);
+}
+
 Future<void> expectXrpTransferPage(WidgetTester tester) async {
   await pumpUntilVisible(
     tester,
@@ -1131,6 +1232,14 @@ Future<void> expectAptTransactionStatusPage(WidgetTester tester) async {
   );
 }
 
+Future<void> expectBtcTransactionStatusPage(
+  WidgetTester tester, {
+  Duration timeout = const Duration(seconds: 20),
+}) async {
+  await pumpUntilVisible(tester, find.text('BTC 交易状态'), timeout: timeout);
+  expect(find.textContaining('交易'), findsWidgets);
+}
+
 Future<void> expectXrpTransactionStatusPage(WidgetTester tester) async {
   await pumpUntilVisible(
     tester,
@@ -1186,6 +1295,22 @@ Future<String> readAptTransactionHash(WidgetTester tester) async {
   final finder = find.byKey(const Key('apt_transaction_status_tx_hash_value'));
   await pumpUntilVisible(tester, finder);
   return tester.widget<Text>(finder).data!;
+}
+
+Future<String> readBtcTransactionHash(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('BTC 交易状态'));
+  final textElements = find.byType(Text).evaluate();
+  final hashPattern = RegExp(r'^[A-Fa-f0-9]{64}$');
+  for (final element in textElements) {
+    final widget = element.widget;
+    if (widget is Text) {
+      final data = widget.data?.trim();
+      if (data != null && hashPattern.hasMatch(data)) {
+        return data;
+      }
+    }
+  }
+  throw TestFailure('Unable to find BTC transaction hash on status page');
 }
 
 Future<String> readXrpTransactionHash(WidgetTester tester) async {
@@ -1303,6 +1428,10 @@ Future<void> openAptTransactionLookupFromStatus(WidgetTester tester) async {
     tester,
     find.byKey(const Key('apt_transaction_status_lookup_button')),
   );
+}
+
+Future<void> openBtcExplorerFromStatusPage(WidgetTester tester) async {
+  await scrollToAndTap(tester, find.text('在浏览器中查看').first);
 }
 
 Future<void> openAptExplorerFromStatusPage(WidgetTester tester) async {
@@ -1597,6 +1726,23 @@ Future<void> fillAptTransferForm(
   await unfocusAndPump(tester);
 }
 
+Future<void> fillBtcTransferForm(
+  WidgetTester tester, {
+  required String address,
+  required String amount,
+}) async {
+  final addressField = find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField && widget.decoration?.hintText == '输入或粘贴钱包地址',
+  );
+  final amountField = find.byWidgetPredicate(
+    (widget) => widget is TextField && widget.decoration?.hintText == '0',
+  );
+  await tester.enterText(addressField, address);
+  await tester.enterText(amountField, amount);
+  await unfocusAndPump(tester);
+}
+
 Future<void> fillXrpTransferForm(
   WidgetTester tester, {
   required String address,
@@ -1706,6 +1852,24 @@ Future<void> fillTonTransferForm(
 
 Future<void> submitAptTransfer(WidgetTester tester) async {
   await tapAndPump(tester, find.byKey(const Key('apt_transfer_submit_button')));
+}
+
+Finder _findVisibleMaterialButtonByText(String text) {
+  final textFinder = find.text(text).hitTestable();
+  return find.ancestor(
+    of: textFinder,
+    matching: find.byWidgetPredicate(
+      (widget) =>
+          widget is TextButton ||
+          widget is ElevatedButton ||
+          widget is OutlinedButton ||
+          widget is FilledButton,
+    ),
+  );
+}
+
+Future<void> submitBtcTransfer(WidgetTester tester) async {
+  await scrollToAndTap(tester, _findVisibleMaterialButtonByText('确定'));
 }
 
 Future<void> submitXrpTransfer(WidgetTester tester) async {
@@ -1841,6 +2005,36 @@ Future<void> waitForAptTransactionConfirmed(
 
   throw TestFailure(
     'Timed out waiting for Apt testnet transaction confirmation',
+  );
+}
+
+Future<void> waitForBtcTransactionBroadcastedOrConfirmed(
+  WidgetTester tester, {
+  Duration timeout = const Duration(minutes: 2),
+  Duration step = const Duration(seconds: 2),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await tester.pump(step);
+
+    final broadcastedFinder = find.text('交易已广播，等待链上确认');
+    if (broadcastedFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final confirmedFinder = find.text('交易已上链确认');
+    if (confirmedFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final failedFinder = find.text('交易执行失败');
+    if (failedFinder.evaluate().isNotEmpty) {
+      throw TestFailure('BTC testnet transaction failed');
+    }
+  }
+
+  throw TestFailure(
+    'Timed out waiting for BTC testnet transaction broadcast status',
   );
 }
 
@@ -2128,6 +2322,27 @@ Future<void> waitForToastMessageValue(
 
   throw TestFailure(
     'Timed out waiting for toast message "$message". '
+    'Observed: $toastMessages',
+  );
+}
+
+Future<void> waitForToastMessageContaining(
+  WidgetTester tester,
+  List<String> toastMessages, {
+  required String message,
+  Duration timeout = const Duration(seconds: 15),
+  Duration step = const Duration(seconds: 1),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    if (toastMessages.any((toast) => toast.contains(message))) {
+      return;
+    }
+    await tester.pump(step);
+  }
+
+  throw TestFailure(
+    'Timed out waiting for toast message containing "$message". '
     'Observed: $toastMessages',
   );
 }

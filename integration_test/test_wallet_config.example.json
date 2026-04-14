@@ -1,4 +1,8 @@
 {
+  "fundedBtcTestnetMnemonic": "replace with funded btc testnet mnemonic",
+  "fundedBtcTestnetAddress": "tb1pReplaceWithFundedBtcTestnetAddress",
+  "btcTestnetTransferRecipientAddress": "tb1pReplaceWithBtcTestnetRecipientAddress",
+  "btcTestnetTransferAmount": "0.0001",
   "fundedAptTestnetMnemonic": "replace with funded apt testnet mnemonic",
   "fundedAptTestnetAddress": "0xreplacewithfundedapttestnetaddress",
   "aptTestnetTransferRecipientAddress": "0x1111111111111111111111111111111111111111111111111111111111111111",
