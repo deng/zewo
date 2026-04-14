@@ -1854,8 +1854,22 @@ Future<void> submitAptTransfer(WidgetTester tester) async {
   await tapAndPump(tester, find.byKey(const Key('apt_transfer_submit_button')));
 }
 
+Finder _findVisibleMaterialButtonByText(String text) {
+  final textFinder = find.text(text).hitTestable();
+  return find.ancestor(
+    of: textFinder,
+    matching: find.byWidgetPredicate(
+      (widget) =>
+          widget is TextButton ||
+          widget is ElevatedButton ||
+          widget is OutlinedButton ||
+          widget is FilledButton,
+    ),
+  );
+}
+
 Future<void> submitBtcTransfer(WidgetTester tester) async {
-  await scrollToAndTap(tester, find.text('确定').last);
+  await scrollToAndTap(tester, _findVisibleMaterialButtonByText('确定'));
 }
 
 Future<void> submitXrpTransfer(WidgetTester tester) async {
@@ -2011,6 +2025,11 @@ Future<void> waitForBtcTransactionBroadcastedOrConfirmed(
     final confirmedFinder = find.text('交易已上链确认');
     if (confirmedFinder.evaluate().isNotEmpty) {
       return;
+    }
+
+    final failedFinder = find.text('交易执行失败');
+    if (failedFinder.evaluate().isNotEmpty) {
+      throw TestFailure('BTC testnet transaction failed');
     }
   }
 

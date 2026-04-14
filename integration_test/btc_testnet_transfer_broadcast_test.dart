@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wallet/wallet.dart';
+import 'package:wallet/src/coins/btc/utils/btc_transaction_status_utils.dart';
 
 import 'test_helpers.dart';
 import 'test_wallet_config.dart';
@@ -73,7 +74,10 @@ void main() {
       await openBtcExplorerFromStatusPage(tester);
       expectLatestExternalLaunchUrl(
         launchedUrls,
-        'https://mempool.space/testnet4/tx/$txHash',
+        BTCTransactionStatusUtils.explorerUrl(
+          txHash: txHash,
+          networkType: NetworkType.testnet,
+        ),
       );
 
       await returnToWalletHomeFromStatusPage(tester);
