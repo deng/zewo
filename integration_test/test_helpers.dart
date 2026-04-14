@@ -837,6 +837,19 @@ Future<void> createWalletAndAddSolDevnetWallet(
   );
 }
 
+Future<void> createWalletAndAddSuiTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: 'sui_testnet',
+    password: password,
+  );
+}
+
 Future<void> createWalletAndAddTonTestnetWallet(
   WidgetTester tester, {
   required String walletName,
@@ -957,6 +970,26 @@ Future<void> importWalletAndAddSolDevnetWallet(
   await pumpUntilWalletHomeReady(tester);
 }
 
+Future<void> importWalletAndAddSuiTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(
+    tester,
+    chainId: 'sui_testnet',
+    password: password,
+  );
+  await pumpUntilWalletHomeReady(tester);
+}
+
 Future<void> importWalletAndAddTonTestnetWallet(
   WidgetTester tester, {
   required String walletName,
@@ -1063,6 +1096,18 @@ Future<void> expectSolTransferPage(WidgetTester tester) async {
   expect(find.text('确定'), findsOneWidget);
 }
 
+Future<void> expectSuiTransferPage(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('发送 SUI'));
+  expect(
+    find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField && widget.decoration?.hintText == '请输入 Sui 地址',
+    ),
+    findsOneWidget,
+  );
+  expect(find.text('发送'), findsOneWidget);
+}
+
 Future<void> expectTonTransferPage(WidgetTester tester) async {
   await pumpUntilVisible(tester, find.text('TON 转账'));
   expect(
@@ -1118,6 +1163,14 @@ Future<void> expectSolTransactionStatusPage(
   Duration timeout = const Duration(seconds: 20),
 }) async {
   await pumpUntilVisible(tester, find.text('SOL 转账状态'), timeout: timeout);
+  expect(find.textContaining('交易'), findsWidgets);
+}
+
+Future<void> expectSuiTransactionStatusPage(
+  WidgetTester tester, {
+  Duration timeout = const Duration(seconds: 20),
+}) async {
+  await pumpUntilVisible(tester, find.text('SUI 转账状态'), timeout: timeout);
   expect(find.textContaining('交易'), findsWidgets);
 }
 
@@ -1177,6 +1230,40 @@ Future<String> readSolTransactionSignature(WidgetTester tester) async {
     }
   }
   throw TestFailure('Unable to find SOL transaction signature on status page');
+}
+
+Future<String> readSuiTransactionDigest(WidgetTester tester) async {
+  const labelText = '交易 Digest';
+  await pumpUntilVisible(tester, find.text(labelText));
+  final rowFinder = find.ancestor(
+    of: find.text(labelText),
+    matching: find.byType(Row),
+  );
+  final digestPattern = RegExp(
+    r'^(0x[0-9a-fA-F]{64}|[1-9A-HJ-NP-Za-km-z]{20,})$',
+  );
+  final valueElements = find
+      .descendant(
+        of: rowFinder,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is Text || widget is SelectableText,
+        ),
+      )
+      .evaluate();
+
+  for (final element in valueElements) {
+    final widget = element.widget;
+    final data = switch (widget) {
+      Text() => widget.data?.trim() ?? widget.textSpan?.toPlainText().trim(),
+      SelectableText() =>
+        widget.data?.trim() ?? widget.textSpan?.toPlainText().trim(),
+      _ => null,
+    };
+    if (data != null && data != labelText && digestPattern.hasMatch(data)) {
+      return data;
+    }
+  }
+  throw TestFailure('Unable to find Sui transaction digest on status page');
 }
 
 Future<String> readTonTransactionLookupHash(WidgetTester tester) async {
@@ -1254,6 +1341,10 @@ Future<void> openEvmExplorerFromStatusPage(WidgetTester tester) async {
 }
 
 Future<void> openTrxExplorerFromStatusPage(WidgetTester tester) async {
+  await scrollToAndTap(tester, find.text('在浏览器中查看'));
+}
+
+Future<void> openSuiExplorerFromStatusPage(WidgetTester tester) async {
   await scrollToAndTap(tester, find.text('在浏览器中查看'));
 }
 
@@ -1579,6 +1670,23 @@ Future<void> fillSolTransferForm(
   await unfocusAndPump(tester);
 }
 
+Future<void> fillSuiTransferForm(
+  WidgetTester tester, {
+  required String address,
+  required String amount,
+}) async {
+  final addressField = find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField && widget.decoration?.hintText == '请输入 Sui 地址',
+  );
+  final amountField = find.byWidgetPredicate(
+    (widget) => widget is TextField && widget.decoration?.hintText == '0',
+  );
+  await tester.enterText(addressField, address);
+  await tester.enterText(amountField, amount);
+  await unfocusAndPump(tester);
+}
+
 Future<void> fillTonTransferForm(
   WidgetTester tester, {
   required String address,
@@ -1610,6 +1718,10 @@ Future<void> submitTrxTransfer(WidgetTester tester) async {
 
 Future<void> submitSolTransfer(WidgetTester tester) async {
   await scrollToAndTap(tester, find.text('确定'));
+}
+
+Future<void> submitSuiTransfer(WidgetTester tester) async {
+  await scrollToAndTap(tester, find.text('发送'));
 }
 
 Future<void> submitTonTransfer(WidgetTester tester) async {
@@ -1847,6 +1959,31 @@ Future<void> waitForSolTransactionConfirmed(
 
   throw TestFailure(
     'Timed out waiting for SOL devnet transaction confirmation',
+  );
+}
+
+Future<void> waitForSuiTransactionConfirmed(
+  WidgetTester tester, {
+  Duration timeout = const Duration(minutes: 2),
+  Duration step = const Duration(seconds: 2),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await tester.pump(step);
+
+    final confirmedFinder = find.text('交易已上链确认');
+    if (confirmedFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final failedFinder = find.text('交易执行失败');
+    if (failedFinder.evaluate().isNotEmpty) {
+      throw TestFailure('SUI testnet transaction failed');
+    }
+  }
+
+  throw TestFailure(
+    'Timed out waiting for SUI testnet transaction confirmation',
   );
 }
 
