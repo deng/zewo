@@ -20,6 +20,7 @@ const String kValidEvmTransferAddress =
 const String kValidXrpTransferAddress = 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe';
 const String kBtcTestnetChainId =
     '000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943';
+const String kLtcTestnetChainId = 'ltc_testnet';
 const String kTrxNileCustomChainId = 'trx_nile';
 const String kTrxShastaCustomChainId = 'trx_shasta';
 const MethodChannel kToastChannel = MethodChannel('PonnamKarthik/fluttertoast');
@@ -867,6 +868,19 @@ Future<void> createWalletAndAddBtcTestnetWallet(
   );
 }
 
+Future<void> createWalletAndAddLtcTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: kLtcTestnetChainId,
+    password: password,
+  );
+}
+
 Future<void> createWalletAndAddEthSepoliaWallet(
   WidgetTester tester, {
   required String walletName,
@@ -1002,6 +1016,26 @@ Future<void> importWalletAndAddBtcTestnetWallet(
   await addHdWalletByChainId(
     tester,
     chainId: kBtcTestnetChainId,
+    password: password,
+  );
+  await pumpUntilWalletHomeReady(tester);
+}
+
+Future<void> importWalletAndAddLtcTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(
+    tester,
+    chainId: kLtcTestnetChainId,
     password: password,
   );
   await pumpUntilWalletHomeReady(tester);
@@ -1143,6 +1177,18 @@ Future<void> expectBtcTransferPage(WidgetTester tester) async {
   expect(find.text('确定'), findsWidgets);
 }
 
+Future<void> expectLtcTransferPage(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('发送 Testnet LTC'));
+  expect(
+    find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField && widget.decoration?.hintText == '请输入 LTC 地址',
+    ),
+    findsOneWidget,
+  );
+  expect(find.text('发送'), findsOneWidget);
+}
+
 Future<void> expectXrpTransferPage(WidgetTester tester) async {
   await pumpUntilVisible(
     tester,
@@ -1240,6 +1286,14 @@ Future<void> expectBtcTransactionStatusPage(
   expect(find.textContaining('交易'), findsWidgets);
 }
 
+Future<void> expectLtcTransactionStatusPage(
+  WidgetTester tester, {
+  Duration timeout = const Duration(seconds: 20),
+}) async {
+  await pumpUntilVisible(tester, find.text('LTC 交易状态'), timeout: timeout);
+  expect(find.textContaining('交易'), findsWidgets);
+}
+
 Future<void> expectXrpTransactionStatusPage(WidgetTester tester) async {
   await pumpUntilVisible(
     tester,
@@ -1311,6 +1365,22 @@ Future<String> readBtcTransactionHash(WidgetTester tester) async {
     }
   }
   throw TestFailure('Unable to find BTC transaction hash on status page');
+}
+
+Future<String> readLtcTransactionHash(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('LTC 交易状态'));
+  final textElements = find.byType(Text).evaluate();
+  final hashPattern = RegExp(r'^[A-Fa-f0-9]{64}$');
+  for (final element in textElements) {
+    final widget = element.widget;
+    if (widget is Text) {
+      final data = widget.data?.trim();
+      if (data != null && hashPattern.hasMatch(data)) {
+        return data;
+      }
+    }
+  }
+  throw TestFailure('Unable to find LTC transaction hash on status page');
 }
 
 Future<String> readXrpTransactionHash(WidgetTester tester) async {
@@ -1431,6 +1501,10 @@ Future<void> openAptTransactionLookupFromStatus(WidgetTester tester) async {
 }
 
 Future<void> openBtcExplorerFromStatusPage(WidgetTester tester) async {
+  await scrollToAndTap(tester, find.text('在浏览器中查看').first);
+}
+
+Future<void> openLtcExplorerFromStatusPage(WidgetTester tester) async {
   await scrollToAndTap(tester, find.text('在浏览器中查看').first);
 }
 
@@ -1743,6 +1817,23 @@ Future<void> fillBtcTransferForm(
   await unfocusAndPump(tester);
 }
 
+Future<void> fillLtcTransferForm(
+  WidgetTester tester, {
+  required String address,
+  required String amount,
+}) async {
+  final addressField = find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField && widget.decoration?.hintText == '请输入 LTC 地址',
+  );
+  final amountField = find.byWidgetPredicate(
+    (widget) => widget is TextField && widget.decoration?.hintText == '0.00',
+  );
+  await tester.enterText(addressField, address);
+  await tester.enterText(amountField, amount);
+  await unfocusAndPump(tester);
+}
+
 Future<void> fillXrpTransferForm(
   WidgetTester tester, {
   required String address,
@@ -1870,6 +1961,10 @@ Finder _findVisibleMaterialButtonByText(String text) {
 
 Future<void> submitBtcTransfer(WidgetTester tester) async {
   await scrollToAndTap(tester, _findVisibleMaterialButtonByText('确定'));
+}
+
+Future<void> submitLtcTransfer(WidgetTester tester) async {
+  await scrollToAndTap(tester, find.text('发送'));
 }
 
 Future<void> submitXrpTransfer(WidgetTester tester) async {
@@ -2035,6 +2130,36 @@ Future<void> waitForBtcTransactionBroadcastedOrConfirmed(
 
   throw TestFailure(
     'Timed out waiting for BTC testnet transaction broadcast status',
+  );
+}
+
+Future<void> waitForLtcTransactionBroadcastedOrConfirmed(
+  WidgetTester tester, {
+  Duration timeout = const Duration(minutes: 2),
+  Duration step = const Duration(seconds: 2),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await tester.pump(step);
+
+    final pendingFinder = find.text('待确认');
+    if (pendingFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final confirmedFinder = find.text('已确认');
+    if (confirmedFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final networkErrorFinder = find.textContaining('网络请求失败');
+    if (networkErrorFinder.evaluate().isNotEmpty) {
+      throw TestFailure('LTC testnet transaction status lookup failed');
+    }
+  }
+
+  throw TestFailure(
+    'Timed out waiting for LTC testnet transaction broadcast status',
   );
 }
 
