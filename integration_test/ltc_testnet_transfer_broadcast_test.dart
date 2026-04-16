@@ -1,4 +1,3 @@
-import 'package:bipx/bipx.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wallet/wallet.dart';
@@ -77,7 +76,7 @@ void main() {
         launchedUrls,
         LtcTransactionStatusUtils.explorerUrl(
           txid: txHash,
-          networkType: NetworkType.testnet,
+          networkType: currentWallet.networkType,
         ),
       );
 
