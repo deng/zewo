@@ -20,6 +20,7 @@ const String kValidEvmTransferAddress =
 const String kValidXrpTransferAddress = 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe';
 const String kBtcTestnetChainId =
     '000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943';
+const String kDogeTestnetChainId = 'doge_testnet';
 const String kBchTestnetChainId = 'bch_testnet';
 const String kLtcTestnetChainId = 'ltc_testnet';
 const String kTrxNileCustomChainId = 'trx_nile';
@@ -869,6 +870,19 @@ Future<void> createWalletAndAddBtcTestnetWallet(
   );
 }
 
+Future<void> createWalletAndAddDogeTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: kDogeTestnetChainId,
+    password: password,
+  );
+}
+
 Future<void> createWalletAndAddBchTestnetWallet(
   WidgetTester tester, {
   required String walletName,
@@ -1030,6 +1044,26 @@ Future<void> importWalletAndAddBtcTestnetWallet(
   await addHdWalletByChainId(
     tester,
     chainId: kBtcTestnetChainId,
+    password: password,
+  );
+  await pumpUntilWalletHomeReady(tester);
+}
+
+Future<void> importWalletAndAddDogeTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(
+    tester,
+    chainId: kDogeTestnetChainId,
     password: password,
   );
   await pumpUntilWalletHomeReady(tester);
@@ -1211,6 +1245,18 @@ Future<void> expectBtcTransferPage(WidgetTester tester) async {
   expect(find.text('确定'), findsWidgets);
 }
 
+Future<void> expectDogeTransferPage(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('发送 DOGE'));
+  expect(
+    find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField && widget.decoration?.hintText == '请输入 DOGE 地址',
+    ),
+    findsOneWidget,
+  );
+  expect(find.text('发送'), findsOneWidget);
+}
+
 Future<void> expectBchTransferPage(WidgetTester tester) async {
   await pumpUntilVisible(tester, find.text('发送 BCH'));
   expect(
@@ -1332,6 +1378,14 @@ Future<void> expectBtcTransactionStatusPage(
   expect(find.textContaining('交易'), findsWidgets);
 }
 
+Future<void> expectDogeTransactionStatusPage(
+  WidgetTester tester, {
+  Duration timeout = const Duration(seconds: 20),
+}) async {
+  await pumpUntilVisible(tester, find.text('DOGE 交易状态'), timeout: timeout);
+  expect(find.textContaining('交易'), findsWidgets);
+}
+
 Future<void> expectBchTransactionStatusPage(
   WidgetTester tester, {
   Duration timeout = const Duration(seconds: 20),
@@ -1419,6 +1473,22 @@ Future<String> readBtcTransactionHash(WidgetTester tester) async {
     }
   }
   throw TestFailure('Unable to find BTC transaction hash on status page');
+}
+
+Future<String> readDogeTransactionHash(WidgetTester tester) async {
+  await pumpUntilVisible(tester, find.text('DOGE 交易状态'));
+  final textElements = find.byType(Text).evaluate();
+  final hashPattern = RegExp(r'^[A-Fa-f0-9]{64}$');
+  for (final element in textElements) {
+    final widget = element.widget;
+    if (widget is Text) {
+      final data = widget.data?.trim();
+      if (data != null && hashPattern.hasMatch(data)) {
+        return data;
+      }
+    }
+  }
+  throw TestFailure('Unable to find DOGE transaction hash on status page');
 }
 
 Future<String> readBchTransactionHash(WidgetTester tester) async {
@@ -1571,6 +1641,10 @@ Future<void> openAptTransactionLookupFromStatus(WidgetTester tester) async {
 }
 
 Future<void> openBtcExplorerFromStatusPage(WidgetTester tester) async {
+  await scrollToAndTap(tester, find.text('在浏览器中查看').first);
+}
+
+Future<void> openDogeExplorerFromStatusPage(WidgetTester tester) async {
   await scrollToAndTap(tester, find.text('在浏览器中查看').first);
 }
 
@@ -1901,7 +1975,26 @@ Future<void> fillBchTransferForm(
         widget is TextField && widget.decoration?.hintText == '请输入 BCH 地址',
   );
   final amountField = find.byWidgetPredicate(
-    (widget) => widget is TextField && widget.decoration?.hintText == '请输入 BCH 金额',
+    (widget) =>
+        widget is TextField && widget.decoration?.hintText == '请输入 BCH 金额',
+  );
+  await tester.enterText(addressField, address);
+  await tester.enterText(amountField, amount);
+  await unfocusAndPump(tester);
+}
+
+Future<void> fillDogeTransferForm(
+  WidgetTester tester, {
+  required String address,
+  required String amount,
+}) async {
+  final addressField = find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField && widget.decoration?.hintText == '请输入 DOGE 地址',
+  );
+  final amountField = find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField && widget.decoration?.hintText == '请输入 DOGE 金额',
   );
   await tester.enterText(addressField, address);
   await tester.enterText(amountField, amount);
@@ -2052,6 +2145,10 @@ Finder _findVisibleMaterialButtonByText(String text) {
 
 Future<void> submitBtcTransfer(WidgetTester tester) async {
   await scrollToAndTap(tester, _findVisibleMaterialButtonByText('确定'));
+}
+
+Future<void> submitDogeTransfer(WidgetTester tester) async {
+  await scrollToAndTap(tester, find.text('发送'));
 }
 
 Future<void> submitBchTransfer(WidgetTester tester) async {
@@ -2225,6 +2322,36 @@ Future<void> waitForBtcTransactionBroadcastedOrConfirmed(
 
   throw TestFailure(
     'Timed out waiting for BTC testnet transaction broadcast status',
+  );
+}
+
+Future<void> waitForDogeTransactionBroadcastedOrConfirmed(
+  WidgetTester tester, {
+  Duration timeout = const Duration(minutes: 2),
+  Duration step = const Duration(seconds: 2),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    await tester.pump(step);
+
+    final pendingFinder = find.text('待确认');
+    if (pendingFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final confirmedFinder = find.text('已确认');
+    if (confirmedFinder.evaluate().isNotEmpty) {
+      return;
+    }
+
+    final networkErrorFinder = find.textContaining('网络请求失败');
+    if (networkErrorFinder.evaluate().isNotEmpty) {
+      throw TestFailure('DOGE testnet transaction status lookup failed');
+    }
+  }
+
+  throw TestFailure(
+    'Timed out waiting for DOGE testnet transaction broadcast status',
   );
 }
 

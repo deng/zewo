@@ -13,6 +13,10 @@ class IntegrationTestWalletConfig {
     this.fundedBtcTestnetAddress = '',
     this.btcTestnetTransferRecipientAddress = '',
     this.btcTestnetTransferAmount = '0.0001',
+    this.fundedDogeTestnetMnemonic = '',
+    this.fundedDogeTestnetAddress = '',
+    this.dogeTestnetTransferRecipientAddress = '',
+    this.dogeTestnetTransferAmount = '1',
     this.fundedBchTestnetMnemonic = '',
     this.fundedBchTestnetAddress = '',
     this.bchTestnetTransferRecipientAddress = '',
@@ -60,6 +64,10 @@ class IntegrationTestWalletConfig {
   final String fundedBtcTestnetAddress;
   final String btcTestnetTransferRecipientAddress;
   final String btcTestnetTransferAmount;
+  final String fundedDogeTestnetMnemonic;
+  final String fundedDogeTestnetAddress;
+  final String dogeTestnetTransferRecipientAddress;
+  final String dogeTestnetTransferAmount;
   final String fundedBchTestnetMnemonic;
   final String fundedBchTestnetAddress;
   final String bchTestnetTransferRecipientAddress;
@@ -104,6 +112,8 @@ class IntegrationTestWalletConfig {
 
   factory IntegrationTestWalletConfig.fromJson(Map<String, dynamic> json) {
     final btcAmount = json['btcTestnetTransferAmount']?.toString().trim() ?? '';
+    final dogeAmount =
+        json['dogeTestnetTransferAmount']?.toString().trim() ?? '';
     final bchAmount = json['bchTestnetTransferAmount']?.toString().trim() ?? '';
     final ltcAmount = json['ltcTestnetTransferAmount']?.toString().trim() ?? '';
     final ethAmount = json['ethSepoliaTransferAmount']?.toString().trim() ?? '';
@@ -129,6 +139,13 @@ class IntegrationTestWalletConfig {
       btcTestnetTransferRecipientAddress:
           json['btcTestnetTransferRecipientAddress']?.toString().trim() ?? '',
       btcTestnetTransferAmount: btcAmount.isEmpty ? '0.0001' : btcAmount,
+      fundedDogeTestnetMnemonic:
+          json['fundedDogeTestnetMnemonic']?.toString().trim() ?? '',
+      fundedDogeTestnetAddress:
+          json['fundedDogeTestnetAddress']?.toString().trim() ?? '',
+      dogeTestnetTransferRecipientAddress:
+          json['dogeTestnetTransferRecipientAddress']?.toString().trim() ?? '',
+      dogeTestnetTransferAmount: dogeAmount.isEmpty ? '1' : dogeAmount,
       fundedBchTestnetMnemonic:
           json['fundedBchTestnetMnemonic']?.toString().trim() ?? '',
       fundedBchTestnetAddress:
@@ -218,6 +235,11 @@ class IntegrationTestWalletConfig {
       fundedBtcTestnetAddress.isNotEmpty &&
       btcTestnetTransferRecipientAddress.isNotEmpty;
 
+  bool get hasFundedDogeTestnetWallet =>
+      fundedDogeTestnetMnemonic.isNotEmpty &&
+      fundedDogeTestnetAddress.isNotEmpty &&
+      dogeTestnetTransferRecipientAddress.isNotEmpty;
+
   bool get hasFundedBchTestnetWallet =>
       fundedBchTestnetMnemonic.isNotEmpty &&
       fundedBchTestnetAddress.isNotEmpty &&
@@ -279,6 +301,7 @@ class IntegrationTestWalletConfig {
 
   bool get hasAnyFundedWallet =>
       hasFundedBtcTestnetWallet ||
+      hasFundedDogeTestnetWallet ||
       hasFundedBchTestnetWallet ||
       hasFundedLtcTestnetWallet ||
       hasFundedAptTestnetWallet ||
