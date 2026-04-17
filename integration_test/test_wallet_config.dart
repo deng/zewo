@@ -13,6 +13,10 @@ class IntegrationTestWalletConfig {
     this.fundedBtcTestnetAddress = '',
     this.btcTestnetTransferRecipientAddress = '',
     this.btcTestnetTransferAmount = '0.0001',
+    this.fundedBchTestnetMnemonic = '',
+    this.fundedBchTestnetAddress = '',
+    this.bchTestnetTransferRecipientAddress = '',
+    this.bchTestnetTransferAmount = '0.001',
     this.fundedLtcTestnetMnemonic = '',
     this.fundedLtcTestnetAddress = '',
     this.ltcTestnetTransferRecipientAddress = '',
@@ -56,6 +60,10 @@ class IntegrationTestWalletConfig {
   final String fundedBtcTestnetAddress;
   final String btcTestnetTransferRecipientAddress;
   final String btcTestnetTransferAmount;
+  final String fundedBchTestnetMnemonic;
+  final String fundedBchTestnetAddress;
+  final String bchTestnetTransferRecipientAddress;
+  final String bchTestnetTransferAmount;
   final String fundedLtcTestnetMnemonic;
   final String fundedLtcTestnetAddress;
   final String ltcTestnetTransferRecipientAddress;
@@ -96,6 +104,7 @@ class IntegrationTestWalletConfig {
 
   factory IntegrationTestWalletConfig.fromJson(Map<String, dynamic> json) {
     final btcAmount = json['btcTestnetTransferAmount']?.toString().trim() ?? '';
+    final bchAmount = json['bchTestnetTransferAmount']?.toString().trim() ?? '';
     final ltcAmount = json['ltcTestnetTransferAmount']?.toString().trim() ?? '';
     final ethAmount = json['ethSepoliaTransferAmount']?.toString().trim() ?? '';
     final xrpAmount = json['xrpTestnetTransferAmount']?.toString().trim() ?? '';
@@ -120,6 +129,13 @@ class IntegrationTestWalletConfig {
       btcTestnetTransferRecipientAddress:
           json['btcTestnetTransferRecipientAddress']?.toString().trim() ?? '',
       btcTestnetTransferAmount: btcAmount.isEmpty ? '0.0001' : btcAmount,
+      fundedBchTestnetMnemonic:
+          json['fundedBchTestnetMnemonic']?.toString().trim() ?? '',
+      fundedBchTestnetAddress:
+          json['fundedBchTestnetAddress']?.toString().trim() ?? '',
+      bchTestnetTransferRecipientAddress:
+          json['bchTestnetTransferRecipientAddress']?.toString().trim() ?? '',
+      bchTestnetTransferAmount: bchAmount.isEmpty ? '0.001' : bchAmount,
       fundedLtcTestnetMnemonic:
           json['fundedLtcTestnetMnemonic']?.toString().trim() ?? '',
       fundedLtcTestnetAddress:
@@ -202,6 +218,11 @@ class IntegrationTestWalletConfig {
       fundedBtcTestnetAddress.isNotEmpty &&
       btcTestnetTransferRecipientAddress.isNotEmpty;
 
+  bool get hasFundedBchTestnetWallet =>
+      fundedBchTestnetMnemonic.isNotEmpty &&
+      fundedBchTestnetAddress.isNotEmpty &&
+      bchTestnetTransferRecipientAddress.isNotEmpty;
+
   bool get hasFundedLtcTestnetWallet =>
       fundedLtcTestnetMnemonic.isNotEmpty &&
       fundedLtcTestnetAddress.isNotEmpty &&
@@ -258,6 +279,7 @@ class IntegrationTestWalletConfig {
 
   bool get hasAnyFundedWallet =>
       hasFundedBtcTestnetWallet ||
+      hasFundedBchTestnetWallet ||
       hasFundedLtcTestnetWallet ||
       hasFundedAptTestnetWallet ||
       hasFundedEthSepoliaWallet ||
