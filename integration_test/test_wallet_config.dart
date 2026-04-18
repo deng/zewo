@@ -44,6 +44,10 @@ class IntegrationTestWalletConfig {
     this.fundedBaseTestnetAddress = '',
     this.baseTestnetTransferRecipientAddress = '',
     this.baseTestnetTransferAmount = '0.0001',
+    this.fundedArbitrumTestnetMnemonic = '',
+    this.fundedArbitrumTestnetAddress = '',
+    this.arbitrumTestnetTransferRecipientAddress = '',
+    this.arbitrumTestnetTransferAmount = '0.0001',
     this.fundedXrpTestnetMnemonic = '',
     this.fundedXrpTestnetAddress = '',
     this.xrpTestnetTransferRecipientAddress = '',
@@ -107,6 +111,10 @@ class IntegrationTestWalletConfig {
   final String fundedBaseTestnetAddress;
   final String baseTestnetTransferRecipientAddress;
   final String baseTestnetTransferAmount;
+  final String fundedArbitrumTestnetMnemonic;
+  final String fundedArbitrumTestnetAddress;
+  final String arbitrumTestnetTransferRecipientAddress;
+  final String arbitrumTestnetTransferAmount;
   final String fundedXrpTestnetMnemonic;
   final String fundedXrpTestnetAddress;
   final String xrpTestnetTransferRecipientAddress;
@@ -146,6 +154,8 @@ class IntegrationTestWalletConfig {
         json['polygonTestnetTransferAmount']?.toString().trim() ?? '';
     final baseAmount =
         json['baseTestnetTransferAmount']?.toString().trim() ?? '';
+    final arbitrumAmount =
+        json['arbitrumTestnetTransferAmount']?.toString().trim() ?? '';
     final xrpAmount = json['xrpTestnetTransferAmount']?.toString().trim() ?? '';
     final solAmount = json['solDevnetTransferAmount']?.toString().trim() ?? '';
     final suiAmount = json['suiTestnetTransferAmount']?.toString().trim() ?? '';
@@ -226,6 +236,16 @@ class IntegrationTestWalletConfig {
       baseTestnetTransferRecipientAddress:
           json['baseTestnetTransferRecipientAddress']?.toString().trim() ?? '',
       baseTestnetTransferAmount: baseAmount.isEmpty ? '0.0001' : baseAmount,
+      fundedArbitrumTestnetMnemonic:
+          json['fundedArbitrumTestnetMnemonic']?.toString().trim() ?? '',
+      fundedArbitrumTestnetAddress:
+          json['fundedArbitrumTestnetAddress']?.toString().trim() ?? '',
+      arbitrumTestnetTransferRecipientAddress:
+          json['arbitrumTestnetTransferRecipientAddress']?.toString().trim() ??
+          '',
+      arbitrumTestnetTransferAmount: arbitrumAmount.isEmpty
+          ? '0.0001'
+          : arbitrumAmount,
       fundedXrpTestnetMnemonic:
           json['fundedXrpTestnetMnemonic']?.toString().trim() ?? '',
       fundedXrpTestnetAddress:
@@ -328,6 +348,11 @@ class IntegrationTestWalletConfig {
       fundedBaseTestnetAddress.isNotEmpty &&
       baseTestnetTransferRecipientAddress.isNotEmpty;
 
+  bool get hasFundedArbitrumTestnetWallet =>
+      fundedArbitrumTestnetMnemonic.isNotEmpty &&
+      fundedArbitrumTestnetAddress.isNotEmpty &&
+      arbitrumTestnetTransferRecipientAddress.isNotEmpty;
+
   bool get hasFundedXrpTestnetWallet =>
       fundedXrpTestnetMnemonic.isNotEmpty &&
       fundedXrpTestnetAddress.isNotEmpty &&
@@ -377,6 +402,7 @@ class IntegrationTestWalletConfig {
       hasFundedBscTestnetWallet ||
       hasFundedPolygonTestnetWallet ||
       hasFundedBaseTestnetWallet ||
+      hasFundedArbitrumTestnetWallet ||
       hasFundedXrpTestnetWallet ||
       hasFundedSolDevnetWallet ||
       hasFundedSuiTestnetWallet ||
