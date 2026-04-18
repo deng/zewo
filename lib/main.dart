@@ -23,6 +23,22 @@ class ZeroWalletApp extends StatefulWidget {
 }
 
 class _ZeroWalletAppState extends State<ZeroWalletApp> {
+  late final ThemeData _lightTheme = ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: Colors.blue,
+      brightness: Brightness.light,
+    ),
+    useMaterial3: true,
+  );
+
+  late final ThemeData _darkTheme = ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: Colors.blue,
+      brightness: Brightness.dark,
+    ),
+    useMaterial3: true,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -47,31 +63,44 @@ class _ZeroWalletAppState extends State<ZeroWalletApp> {
             return provider;
           },
         ),
-        // 可以添加更多的 Provider
-        // ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        // ChangeNotifierProvider(create: (_) => SettingsProvider()),
-        // ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(
+          create: (context) {
+            final controller = UsageSettingsController();
+            controller.initialize();
+            return controller;
+          },
+        ),
       ],
-      child: MaterialApp(
-        title: 'Zero Wallet',
-        onGenerateRoute: WalletRoutes.onGenerateRoute,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            brightness: Brightness.light,
+      child:
+          Selector<
+            UsageSettingsController,
+            ({ThemeMode themeMode, bool developerMode})
+          >(
+            selector: (_, controller) => (
+              themeMode: controller.themeMode,
+              developerMode: controller.developerMode,
+            ),
+            builder: (context, usageSettings, child) {
+              return MaterialApp(
+                title: 'Zero Wallet',
+                onGenerateRoute: WalletRoutes.onGenerateRoute,
+                theme: _lightTheme,
+                darkTheme: _darkTheme,
+                themeMode: usageSettings.themeMode,
+                builder: (context, child) {
+                  if (child == null || !usageSettings.developerMode) {
+                    return child ?? const SizedBox.shrink();
+                  }
+                  return Banner(
+                    message: 'DEV',
+                    location: BannerLocation.topEnd,
+                    child: child,
+                  );
+                },
+                home: const MainPage(),
+              );
+            },
           ),
-          useMaterial3: true,
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-        ),
-        themeMode: ThemeMode.dark, // 强制使用深色主题
-        home: const MainPage(), // 使用统一的主页面
-      ),
     );
   }
 }
