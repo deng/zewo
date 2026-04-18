@@ -48,6 +48,10 @@ class IntegrationTestWalletConfig {
     this.fundedArbitrumTestnetAddress = '',
     this.arbitrumTestnetTransferRecipientAddress = '',
     this.arbitrumTestnetTransferAmount = '0.0001',
+    this.fundedOptimismTestnetMnemonic = '',
+    this.fundedOptimismTestnetAddress = '',
+    this.optimismTestnetTransferRecipientAddress = '',
+    this.optimismTestnetTransferAmount = '0.0001',
     this.fundedXrpTestnetMnemonic = '',
     this.fundedXrpTestnetAddress = '',
     this.xrpTestnetTransferRecipientAddress = '',
@@ -115,6 +119,10 @@ class IntegrationTestWalletConfig {
   final String fundedArbitrumTestnetAddress;
   final String arbitrumTestnetTransferRecipientAddress;
   final String arbitrumTestnetTransferAmount;
+  final String fundedOptimismTestnetMnemonic;
+  final String fundedOptimismTestnetAddress;
+  final String optimismTestnetTransferRecipientAddress;
+  final String optimismTestnetTransferAmount;
   final String fundedXrpTestnetMnemonic;
   final String fundedXrpTestnetAddress;
   final String xrpTestnetTransferRecipientAddress;
@@ -156,6 +164,8 @@ class IntegrationTestWalletConfig {
         json['baseTestnetTransferAmount']?.toString().trim() ?? '';
     final arbitrumAmount =
         json['arbitrumTestnetTransferAmount']?.toString().trim() ?? '';
+    final optimismAmount =
+        json['optimismTestnetTransferAmount']?.toString().trim() ?? '';
     final xrpAmount = json['xrpTestnetTransferAmount']?.toString().trim() ?? '';
     final solAmount = json['solDevnetTransferAmount']?.toString().trim() ?? '';
     final suiAmount = json['suiTestnetTransferAmount']?.toString().trim() ?? '';
@@ -246,6 +256,16 @@ class IntegrationTestWalletConfig {
       arbitrumTestnetTransferAmount: arbitrumAmount.isEmpty
           ? '0.0001'
           : arbitrumAmount,
+      fundedOptimismTestnetMnemonic:
+          json['fundedOptimismTestnetMnemonic']?.toString().trim() ?? '',
+      fundedOptimismTestnetAddress:
+          json['fundedOptimismTestnetAddress']?.toString().trim() ?? '',
+      optimismTestnetTransferRecipientAddress:
+          json['optimismTestnetTransferRecipientAddress']?.toString().trim() ??
+          '',
+      optimismTestnetTransferAmount: optimismAmount.isEmpty
+          ? '0.0001'
+          : optimismAmount,
       fundedXrpTestnetMnemonic:
           json['fundedXrpTestnetMnemonic']?.toString().trim() ?? '',
       fundedXrpTestnetAddress:
@@ -353,6 +373,11 @@ class IntegrationTestWalletConfig {
       fundedArbitrumTestnetAddress.isNotEmpty &&
       arbitrumTestnetTransferRecipientAddress.isNotEmpty;
 
+  bool get hasFundedOptimismTestnetWallet =>
+      fundedOptimismTestnetMnemonic.isNotEmpty &&
+      fundedOptimismTestnetAddress.isNotEmpty &&
+      optimismTestnetTransferRecipientAddress.isNotEmpty;
+
   bool get hasFundedXrpTestnetWallet =>
       fundedXrpTestnetMnemonic.isNotEmpty &&
       fundedXrpTestnetAddress.isNotEmpty &&
@@ -403,6 +428,7 @@ class IntegrationTestWalletConfig {
       hasFundedPolygonTestnetWallet ||
       hasFundedBaseTestnetWallet ||
       hasFundedArbitrumTestnetWallet ||
+      hasFundedOptimismTestnetWallet ||
       hasFundedXrpTestnetWallet ||
       hasFundedSolDevnetWallet ||
       hasFundedSuiTestnetWallet ||
