@@ -32,6 +32,10 @@ class IntegrationTestWalletConfig {
     this.fundedEthSepoliaAddress = '',
     this.ethSepoliaTransferRecipientAddress = '',
     this.ethSepoliaTransferAmount = '0.0001',
+    this.fundedBscTestnetMnemonic = '',
+    this.fundedBscTestnetAddress = '',
+    this.bscTestnetTransferRecipientAddress = '',
+    this.bscTestnetTransferAmount = '0.001',
     this.fundedXrpTestnetMnemonic = '',
     this.fundedXrpTestnetAddress = '',
     this.xrpTestnetTransferRecipientAddress = '',
@@ -83,6 +87,10 @@ class IntegrationTestWalletConfig {
   final String fundedEthSepoliaAddress;
   final String ethSepoliaTransferRecipientAddress;
   final String ethSepoliaTransferAmount;
+  final String fundedBscTestnetMnemonic;
+  final String fundedBscTestnetAddress;
+  final String bscTestnetTransferRecipientAddress;
+  final String bscTestnetTransferAmount;
   final String fundedXrpTestnetMnemonic;
   final String fundedXrpTestnetAddress;
   final String xrpTestnetTransferRecipientAddress;
@@ -117,6 +125,7 @@ class IntegrationTestWalletConfig {
     final bchAmount = json['bchTestnetTransferAmount']?.toString().trim() ?? '';
     final ltcAmount = json['ltcTestnetTransferAmount']?.toString().trim() ?? '';
     final ethAmount = json['ethSepoliaTransferAmount']?.toString().trim() ?? '';
+    final bscAmount = json['bscTestnetTransferAmount']?.toString().trim() ?? '';
     final xrpAmount = json['xrpTestnetTransferAmount']?.toString().trim() ?? '';
     final solAmount = json['solDevnetTransferAmount']?.toString().trim() ?? '';
     final suiAmount = json['suiTestnetTransferAmount']?.toString().trim() ?? '';
@@ -173,6 +182,13 @@ class IntegrationTestWalletConfig {
       ethSepoliaTransferRecipientAddress:
           json['ethSepoliaTransferRecipientAddress']?.toString().trim() ?? '',
       ethSepoliaTransferAmount: ethAmount.isEmpty ? '0.0001' : ethAmount,
+      fundedBscTestnetMnemonic:
+          json['fundedBscTestnetMnemonic']?.toString().trim() ?? '',
+      fundedBscTestnetAddress:
+          json['fundedBscTestnetAddress']?.toString().trim() ?? '',
+      bscTestnetTransferRecipientAddress:
+          json['bscTestnetTransferRecipientAddress']?.toString().trim() ?? '',
+      bscTestnetTransferAmount: bscAmount.isEmpty ? '0.001' : bscAmount,
       fundedXrpTestnetMnemonic:
           json['fundedXrpTestnetMnemonic']?.toString().trim() ?? '',
       fundedXrpTestnetAddress:
@@ -260,6 +276,11 @@ class IntegrationTestWalletConfig {
       fundedEthSepoliaAddress.isNotEmpty &&
       ethSepoliaTransferRecipientAddress.isNotEmpty;
 
+  bool get hasFundedBscTestnetWallet =>
+      fundedBscTestnetMnemonic.isNotEmpty &&
+      fundedBscTestnetAddress.isNotEmpty &&
+      bscTestnetTransferRecipientAddress.isNotEmpty;
+
   bool get hasFundedXrpTestnetWallet =>
       fundedXrpTestnetMnemonic.isNotEmpty &&
       fundedXrpTestnetAddress.isNotEmpty &&
@@ -306,6 +327,7 @@ class IntegrationTestWalletConfig {
       hasFundedLtcTestnetWallet ||
       hasFundedAptTestnetWallet ||
       hasFundedEthSepoliaWallet ||
+      hasFundedBscTestnetWallet ||
       hasFundedXrpTestnetWallet ||
       hasFundedSolDevnetWallet ||
       hasFundedSuiTestnetWallet ||
