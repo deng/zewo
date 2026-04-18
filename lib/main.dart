@@ -23,6 +23,22 @@ class ZeroWalletApp extends StatefulWidget {
 }
 
 class _ZeroWalletAppState extends State<ZeroWalletApp> {
+  late final ThemeData _lightTheme = ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: Colors.blue,
+      brightness: Brightness.light,
+    ),
+    useMaterial3: true,
+  );
+
+  late final ThemeData _darkTheme = ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: Colors.blue,
+      brightness: Brightness.dark,
+    ),
+    useMaterial3: true,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -55,40 +71,36 @@ class _ZeroWalletAppState extends State<ZeroWalletApp> {
           },
         ),
       ],
-      child: Consumer<UsageSettingsController>(
-        builder: (context, usageSettings, child) {
-          return MaterialApp(
-            title: 'Zero Wallet',
-            onGenerateRoute: WalletRoutes.onGenerateRoute,
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.blue,
-                brightness: Brightness.light,
-              ),
-              useMaterial3: true,
+      child:
+          Selector<
+            UsageSettingsController,
+            ({ThemeMode themeMode, bool developerMode})
+          >(
+            selector: (_, controller) => (
+              themeMode: controller.themeMode,
+              developerMode: controller.developerMode,
             ),
-            darkTheme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.blue,
-                brightness: Brightness.dark,
-              ),
-              useMaterial3: true,
-            ),
-            themeMode: usageSettings.themeMode,
-            builder: (context, child) {
-              if (child == null || !usageSettings.developerMode) {
-                return child ?? const SizedBox.shrink();
-              }
-              return Banner(
-                message: 'DEV',
-                location: BannerLocation.topEnd,
-                child: child,
+            builder: (context, usageSettings, child) {
+              return MaterialApp(
+                title: 'Zero Wallet',
+                onGenerateRoute: WalletRoutes.onGenerateRoute,
+                theme: _lightTheme,
+                darkTheme: _darkTheme,
+                themeMode: usageSettings.themeMode,
+                builder: (context, child) {
+                  if (child == null || !usageSettings.developerMode) {
+                    return child ?? const SizedBox.shrink();
+                  }
+                  return Banner(
+                    message: 'DEV',
+                    location: BannerLocation.topEnd,
+                    child: child,
+                  );
+                },
+                home: const MainPage(),
               );
             },
-            home: const MainPage(),
-          );
-        },
-      ),
+          ),
     );
   }
 }

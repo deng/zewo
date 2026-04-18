@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wallet/wallet.dart';
 
 import 'test_helpers.dart';
 
@@ -29,49 +30,43 @@ void main() {
 
     await tester.tap(find.byKey(const Key('usage_settings_language_dropdown')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('English').last);
+    await tester.tap(
+      find
+          .byKey(const Key('usage_settings_language_option_english_label'))
+          .last,
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('usage_settings_theme_dropdown')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('浅色').last);
+    await tester.tap(
+      find.byKey(const Key('usage_settings_theme_option_light_label')).last,
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('usage_settings_developer_switch')));
     await tester.pumpAndSettle();
 
-    await pumpUntilVisible(
-      tester,
-      find.byKey(const Key('usage_settings_language_value')),
+    final languageValueFinder = find.byKey(
+      const Key('usage_settings_language_value'),
     );
-    await pumpUntilVisible(
-      tester,
-      find.byKey(const Key('usage_settings_theme_value')),
+    final themeValueFinder = find.byKey(
+      const Key('usage_settings_theme_value'),
     );
-    expect(find.text('English'), findsWidgets);
-    expect(find.text('浅色'), findsWidgets);
+    await pumpUntilVisible(tester, languageValueFinder);
+    await pumpUntilVisible(tester, themeValueFinder);
+    expect(tester.widget<Text>(languageValueFinder).data, 'English');
+    expect(tester.widget<Text>(themeValueFinder).data, '浅色');
 
     final developerSwitch = tester.widget<SwitchListTile>(
       find.byKey(const Key('usage_settings_developer_switch')),
     );
     expect(developerSwitch.value, isTrue);
 
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-
-    await tapAndPump(
-      tester,
-      find.byKey(const Key('profile_usage_settings_tile')),
-    );
-    await pumpUntilVisible(
-      tester,
-      find.byKey(const Key('usage_settings_page_title')),
-    );
-    expect(find.text('English'), findsWidgets);
-    expect(find.text('浅色'), findsWidgets);
-    final persistedSwitch = tester.widget<SwitchListTile>(
-      find.byKey(const Key('usage_settings_developer_switch')),
-    );
-    expect(persistedSwitch.value, isTrue);
+    final restoredController = UsageSettingsController();
+    await restoredController.initialize();
+    expect(restoredController.language, AppLanguage.english);
+    expect(restoredController.themePreference, AppThemePreference.light);
+    expect(restoredController.developerMode, isTrue);
   });
 }
