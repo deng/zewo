@@ -47,30 +47,47 @@ class _ZeroWalletAppState extends State<ZeroWalletApp> {
             return provider;
           },
         ),
-        // 可以添加更多的 Provider
-        // ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        // ChangeNotifierProvider(create: (_) => SettingsProvider()),
-        // ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(
+          create: (context) {
+            final controller = UsageSettingsController();
+            controller.initialize();
+            return controller;
+          },
+        ),
       ],
-      child: MaterialApp(
-        title: 'Zero Wallet',
-        onGenerateRoute: WalletRoutes.onGenerateRoute,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            brightness: Brightness.dark,
-          ),
-          useMaterial3: true,
-        ),
-        themeMode: ThemeMode.dark, // 强制使用深色主题
-        home: const MainPage(), // 使用统一的主页面
+      child: Consumer<UsageSettingsController>(
+        builder: (context, usageSettings, child) {
+          return MaterialApp(
+            title: 'Zero Wallet',
+            onGenerateRoute: WalletRoutes.onGenerateRoute,
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.blue,
+                brightness: Brightness.light,
+              ),
+              useMaterial3: true,
+            ),
+            darkTheme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.blue,
+                brightness: Brightness.dark,
+              ),
+              useMaterial3: true,
+            ),
+            themeMode: usageSettings.themeMode,
+            builder: (context, child) {
+              if (child == null || !usageSettings.developerMode) {
+                return child ?? const SizedBox.shrink();
+              }
+              return Banner(
+                message: 'DEV',
+                location: BannerLocation.topEnd,
+                child: child,
+              );
+            },
+            home: const MainPage(),
+          );
+        },
       ),
     );
   }
