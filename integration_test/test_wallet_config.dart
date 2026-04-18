@@ -40,6 +40,10 @@ class IntegrationTestWalletConfig {
     this.fundedPolygonTestnetAddress = '',
     this.polygonTestnetTransferRecipientAddress = '',
     this.polygonTestnetTransferAmount = '0.001',
+    this.fundedBaseTestnetMnemonic = '',
+    this.fundedBaseTestnetAddress = '',
+    this.baseTestnetTransferRecipientAddress = '',
+    this.baseTestnetTransferAmount = '0.0001',
     this.fundedXrpTestnetMnemonic = '',
     this.fundedXrpTestnetAddress = '',
     this.xrpTestnetTransferRecipientAddress = '',
@@ -99,6 +103,10 @@ class IntegrationTestWalletConfig {
   final String fundedPolygonTestnetAddress;
   final String polygonTestnetTransferRecipientAddress;
   final String polygonTestnetTransferAmount;
+  final String fundedBaseTestnetMnemonic;
+  final String fundedBaseTestnetAddress;
+  final String baseTestnetTransferRecipientAddress;
+  final String baseTestnetTransferAmount;
   final String fundedXrpTestnetMnemonic;
   final String fundedXrpTestnetAddress;
   final String xrpTestnetTransferRecipientAddress;
@@ -136,6 +144,8 @@ class IntegrationTestWalletConfig {
     final bscAmount = json['bscTestnetTransferAmount']?.toString().trim() ?? '';
     final polygonAmount =
         json['polygonTestnetTransferAmount']?.toString().trim() ?? '';
+    final baseAmount =
+        json['baseTestnetTransferAmount']?.toString().trim() ?? '';
     final xrpAmount = json['xrpTestnetTransferAmount']?.toString().trim() ?? '';
     final solAmount = json['solDevnetTransferAmount']?.toString().trim() ?? '';
     final suiAmount = json['suiTestnetTransferAmount']?.toString().trim() ?? '';
@@ -209,6 +219,13 @@ class IntegrationTestWalletConfig {
       polygonTestnetTransferAmount: polygonAmount.isEmpty
           ? '0.001'
           : polygonAmount,
+      fundedBaseTestnetMnemonic:
+          json['fundedBaseTestnetMnemonic']?.toString().trim() ?? '',
+      fundedBaseTestnetAddress:
+          json['fundedBaseTestnetAddress']?.toString().trim() ?? '',
+      baseTestnetTransferRecipientAddress:
+          json['baseTestnetTransferRecipientAddress']?.toString().trim() ?? '',
+      baseTestnetTransferAmount: baseAmount.isEmpty ? '0.0001' : baseAmount,
       fundedXrpTestnetMnemonic:
           json['fundedXrpTestnetMnemonic']?.toString().trim() ?? '',
       fundedXrpTestnetAddress:
@@ -306,6 +323,11 @@ class IntegrationTestWalletConfig {
       fundedPolygonTestnetAddress.isNotEmpty &&
       polygonTestnetTransferRecipientAddress.isNotEmpty;
 
+  bool get hasFundedBaseTestnetWallet =>
+      fundedBaseTestnetMnemonic.isNotEmpty &&
+      fundedBaseTestnetAddress.isNotEmpty &&
+      baseTestnetTransferRecipientAddress.isNotEmpty;
+
   bool get hasFundedXrpTestnetWallet =>
       fundedXrpTestnetMnemonic.isNotEmpty &&
       fundedXrpTestnetAddress.isNotEmpty &&
@@ -354,6 +376,7 @@ class IntegrationTestWalletConfig {
       hasFundedEthSepoliaWallet ||
       hasFundedBscTestnetWallet ||
       hasFundedPolygonTestnetWallet ||
+      hasFundedBaseTestnetWallet ||
       hasFundedXrpTestnetWallet ||
       hasFundedSolDevnetWallet ||
       hasFundedSuiTestnetWallet ||
