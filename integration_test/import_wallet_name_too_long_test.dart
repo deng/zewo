@@ -6,14 +6,17 @@ import 'test_helpers.dart';
 void main() {
   configureIntegrationTest();
 
-  testWidgets('shows form error when imported wallet name exceeds 12 chars', (
+  testWidgets('shows form error when imported wallet name exceeds 24 chars', (
     tester,
   ) async {
     await launchTestApp();
 
     await openImportWalletFromHome(tester);
 
-    await fillImportWalletForm(tester, walletName: 'Wallet Name 01');
+    await fillImportWalletForm(
+      tester,
+      walletName: 'Wallet Name Exceeds Limit 01',
+    );
 
     await tapAndPump(
       tester,
@@ -21,7 +24,7 @@ void main() {
       settle: const Duration(seconds: 1),
     );
 
-    await expectValidationError(tester, '钱包名称不能超过12个字符');
+    await expectValidationError(tester, '钱包名称不能超过24个字符');
     expectPostImportPromptHidden();
   });
 }
