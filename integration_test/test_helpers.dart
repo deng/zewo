@@ -23,6 +23,7 @@ const String kBtcTestnetChainId =
 const String kBscTestnetChainId = '97';
 const String kPolygonTestnetChainId = '80002';
 const String kBaseTestnetChainId = '84532';
+const String kArbitrumTestnetChainId = '421614';
 const String kDogeTestnetChainId = 'doge_testnet';
 const String kBchTestnetChainId = 'bch_testnet';
 const String kLtcTestnetChainId = 'ltc_testnet';
@@ -964,6 +965,19 @@ Future<void> createWalletAndAddBaseTestnetWallet(
   );
 }
 
+Future<void> createWalletAndAddArbitrumTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  String password = 'Passw0rd!',
+}) async {
+  await createWalletAndAddHdWallet(
+    tester,
+    walletName: walletName,
+    chainId: kArbitrumTestnetChainId,
+    password: password,
+  );
+}
+
 Future<void> createWalletAndAddXrpTestnetWallet(
   WidgetTester tester, {
   required String walletName,
@@ -1222,6 +1236,26 @@ Future<void> importWalletAndAddBaseTestnetWallet(
   await addHdWalletByChainId(
     tester,
     chainId: kBaseTestnetChainId,
+    password: password,
+  );
+  await pumpUntilWalletHomeReady(tester);
+}
+
+Future<void> importWalletAndAddArbitrumTestnetWallet(
+  WidgetTester tester, {
+  required String walletName,
+  required String mnemonic,
+  String password = 'Passw0rd!',
+}) async {
+  await importWalletThenAddNetworks(
+    tester,
+    walletName: walletName,
+    mnemonic: mnemonic,
+    password: password,
+  );
+  await addHdWalletByChainId(
+    tester,
+    chainId: kArbitrumTestnetChainId,
     password: password,
   );
   await pumpUntilWalletHomeReady(tester);
