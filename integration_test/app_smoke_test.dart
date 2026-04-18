@@ -25,7 +25,13 @@ void main() {
     await expectTextVisible(tester, '交易功能开发中');
 
     await tapAndPump(tester, find.byKey(const Key('bottom_nav_profile')));
-    await expectTextVisible(tester, '个人页面');
+    await pumpUntilVisible(tester, find.byKey(const Key('profile_page_title')));
+    await pumpUntilVisible(
+      tester,
+      find.byKey(const Key('profile_address_book_tile')),
+    );
+    expect(find.byKey(const Key('profile_page_title')), findsOneWidget);
+    expect(find.byKey(const Key('profile_address_book_tile')), findsOneWidget);
 
     await tapAndPump(tester, find.byKey(const Key('bottom_nav_home')));
     await expectTextVisible(tester, 'E2E Wallet');
