@@ -26,7 +26,11 @@ void main() {
       find.byKey(const Key('address_book_page_title')),
     );
 
-    expect(find.text('还没有联系人'), findsOneWidget);
+    await expectTextVisible(tester, '还没有联系人');
+    await pumpUntilVisible(
+      tester,
+      find.byKey(const Key('address_book_empty_add_button')),
+    );
     await tapAndPump(
       tester,
       find.byKey(const Key('address_book_empty_add_button')),
@@ -59,6 +63,7 @@ void main() {
       tester,
       find.byKey(const Key('address_book_page_title')),
     );
+    await expectTextVisible(tester, 'Alice');
     expect(find.text('Alice'), findsOneWidget);
     expect(find.text('Ethereum'), findsOneWidget);
     expect(find.text('Friend'), findsOneWidget);

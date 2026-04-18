@@ -26,6 +26,10 @@ void main() {
 
     await tapAndPump(tester, find.byKey(const Key('bottom_nav_profile')));
     await pumpUntilVisible(tester, find.byKey(const Key('profile_page_title')));
+    await pumpUntilVisible(
+      tester,
+      find.byKey(const Key('profile_address_book_tile')),
+    );
     expect(find.byKey(const Key('profile_page_title')), findsOneWidget);
     expect(find.byKey(const Key('profile_address_book_tile')), findsOneWidget);
 
