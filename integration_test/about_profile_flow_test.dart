@@ -14,11 +14,7 @@ void main() {
 
     await tapAndPump(tester, find.byKey(const Key('bottom_nav_profile')));
     await pumpUntilVisible(tester, find.byKey(const Key('profile_page_title')));
-    await scrollFinderIntoView(
-      tester,
-      find.byKey(const Key('profile_about_tile')),
-    );
-    await tapAndPump(tester, find.byKey(const Key('profile_about_tile')));
+    await scrollToAndTap(tester, find.byKey(const Key('profile_about_tile')));
 
     await pumpUntilVisible(tester, find.byKey(const Key('about_page_title')));
     await pumpUntilVisible(tester, find.byKey(const Key('about_app_name')));
