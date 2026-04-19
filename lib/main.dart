@@ -23,21 +23,87 @@ class ZeroWalletApp extends StatefulWidget {
 }
 
 class _ZeroWalletAppState extends State<ZeroWalletApp> {
-  late final ThemeData _lightTheme = ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue,
-      brightness: Brightness.light,
-    ),
-    useMaterial3: true,
-  );
+  late final ThemeData _lightTheme = _buildTheme(Brightness.light);
 
-  late final ThemeData _darkTheme = ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue,
-      brightness: Brightness.dark,
-    ),
-    useMaterial3: true,
-  );
+  late final ThemeData _darkTheme = _buildTheme(Brightness.dark);
+
+  ThemeData _buildTheme(Brightness brightness) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF3D6BFF),
+      brightness: brightness,
+    );
+    final scaffoldBackgroundColor = brightness == Brightness.dark
+        ? const Color(0xFF0F131B)
+        : const Color(0xFFF4F7FB);
+    final inputFillColor = brightness == Brightness.dark
+        ? colorScheme.surfaceContainerHighest
+        : colorScheme.surfaceContainerLow;
+
+    OutlineInputBorder inputBorder(Color color) {
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: color),
+      );
+    }
+
+    return ThemeData(
+      colorScheme: colorScheme,
+      useMaterial3: true,
+      scaffoldBackgroundColor: scaffoldBackgroundColor,
+      canvasColor: scaffoldBackgroundColor,
+      appBarTheme: AppBarTheme(
+        backgroundColor: scaffoldBackgroundColor,
+        foregroundColor: colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
+      dividerTheme: DividerThemeData(
+        color: colorScheme.outlineVariant,
+        thickness: 1,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: inputFillColor,
+        labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        hintStyle: TextStyle(
+          color: colorScheme.onSurfaceVariant.withOpacity(0.72),
+        ),
+        border: inputBorder(colorScheme.outlineVariant),
+        enabledBorder: inputBorder(colorScheme.outlineVariant),
+        focusedBorder: inputBorder(colorScheme.primary),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: brightness == Brightness.dark
+            ? colorScheme.surfaceContainerHigh
+            : colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colorScheme.onSurface,
+          side: BorderSide(color: colorScheme.outline),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
