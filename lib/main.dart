@@ -23,25 +23,30 @@ class ZeroWalletApp extends StatefulWidget {
 }
 
 class _ZeroWalletAppState extends State<ZeroWalletApp> {
+  static const _themeSeedColor = Color(0xFF3D6BFF);
+  static const _lightScaffoldColor = Color(0xFFF4F7FB);
+  static const _darkScaffoldColor = Color(0xFF0F131B);
+  static const _themeRadius = 16.0;
+
   late final ThemeData _lightTheme = _buildTheme(Brightness.light);
 
   late final ThemeData _darkTheme = _buildTheme(Brightness.dark);
 
   ThemeData _buildTheme(Brightness brightness) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF3D6BFF),
+      seedColor: _themeSeedColor,
       brightness: brightness,
     );
     final scaffoldBackgroundColor = brightness == Brightness.dark
-        ? const Color(0xFF0F131B)
-        : const Color(0xFFF4F7FB);
+        ? _darkScaffoldColor
+        : _lightScaffoldColor;
     final inputFillColor = brightness == Brightness.dark
         ? colorScheme.surfaceContainerHighest
         : colorScheme.surfaceContainerLow;
 
     OutlineInputBorder inputBorder(Color color) {
       return OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(_themeRadius),
         borderSide: BorderSide(color: color),
       );
     }
@@ -70,13 +75,18 @@ class _ZeroWalletAppState extends State<ZeroWalletApp> {
         ),
         border: inputBorder(colorScheme.outlineVariant),
         enabledBorder: inputBorder(colorScheme.outlineVariant),
+        disabledBorder: inputBorder(colorScheme.outlineVariant),
         focusedBorder: inputBorder(colorScheme.primary),
+        errorBorder: inputBorder(colorScheme.error),
+        focusedErrorBorder: inputBorder(colorScheme.error),
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: brightness == Brightness.dark
             ? colorScheme.surfaceContainerHigh
             : colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_themeRadius),
+        ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: colorScheme.primary,
@@ -87,7 +97,7 @@ class _ZeroWalletAppState extends State<ZeroWalletApp> {
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(_themeRadius),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         ),
@@ -97,7 +107,7 @@ class _ZeroWalletAppState extends State<ZeroWalletApp> {
           foregroundColor: colorScheme.onSurface,
           side: BorderSide(color: colorScheme.outline),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(_themeRadius - 2),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
