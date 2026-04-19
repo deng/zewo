@@ -37,7 +37,11 @@ void main() {
     );
 
     await tester.pageBack();
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
+    await pumpUntilVisible(
+      tester,
+      find.byKey(const Key('network_settings_manage_tron_tile')),
+    );
 
     await tapAndPump(
       tester,
