@@ -23,21 +23,97 @@ class ZeroWalletApp extends StatefulWidget {
 }
 
 class _ZeroWalletAppState extends State<ZeroWalletApp> {
-  late final ThemeData _lightTheme = ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue,
-      brightness: Brightness.light,
-    ),
-    useMaterial3: true,
-  );
+  static const _themeSeedColor = Color(0xFF3D6BFF);
+  static const _lightScaffoldColor = Color(0xFFF4F7FB);
+  static const _darkScaffoldColor = Color(0xFF0F131B);
+  static const _themeRadius = 16.0;
 
-  late final ThemeData _darkTheme = ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.blue,
-      brightness: Brightness.dark,
-    ),
-    useMaterial3: true,
-  );
+  late final ThemeData _lightTheme = _buildTheme(Brightness.light);
+
+  late final ThemeData _darkTheme = _buildTheme(Brightness.dark);
+
+  ThemeData _buildTheme(Brightness brightness) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: _themeSeedColor,
+      brightness: brightness,
+    );
+    final scaffoldBackgroundColor = brightness == Brightness.dark
+        ? _darkScaffoldColor
+        : _lightScaffoldColor;
+    final inputFillColor = brightness == Brightness.dark
+        ? colorScheme.surfaceContainerHighest
+        : colorScheme.surfaceContainerLow;
+
+    OutlineInputBorder inputBorder(Color color) {
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(_themeRadius),
+        borderSide: BorderSide(color: color),
+      );
+    }
+
+    return ThemeData(
+      colorScheme: colorScheme,
+      useMaterial3: true,
+      scaffoldBackgroundColor: scaffoldBackgroundColor,
+      canvasColor: scaffoldBackgroundColor,
+      appBarTheme: AppBarTheme(
+        backgroundColor: scaffoldBackgroundColor,
+        foregroundColor: colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
+      dividerTheme: DividerThemeData(
+        color: colorScheme.outlineVariant,
+        thickness: 1,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: inputFillColor,
+        labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+        hintStyle: TextStyle(
+          color: colorScheme.onSurfaceVariant.withOpacity(0.72),
+        ),
+        border: inputBorder(colorScheme.outlineVariant),
+        enabledBorder: inputBorder(colorScheme.outlineVariant),
+        disabledBorder: inputBorder(colorScheme.outlineVariant),
+        focusedBorder: inputBorder(colorScheme.primary),
+        errorBorder: inputBorder(colorScheme.error),
+        focusedErrorBorder: inputBorder(colorScheme.error),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: brightness == Brightness.dark
+            ? colorScheme.surfaceContainerHigh
+            : colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_themeRadius),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_themeRadius),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colorScheme.onSurface,
+          side: BorderSide(color: colorScheme.outline),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_themeRadius - 2),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
