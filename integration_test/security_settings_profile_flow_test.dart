@@ -17,6 +17,7 @@ void main() {
 
     final currentWallet = WalletProvider.getInstance()?.currentWallet;
     expect(currentWallet, isNotNull);
+    expect(currentWallet!.mnemonicId, isNotNull);
 
     await tapAndPump(tester, find.byKey(const Key('bottom_nav_profile')));
     await pumpUntilVisible(
@@ -46,7 +47,11 @@ void main() {
       find.byKey(const Key('security_settings_auto_lock_dropdown')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('15 分钟').last);
+    await tester.tap(
+      find
+          .byKey(const Key('security_settings_auto_lock_option_minute15_label'))
+          .last,
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(
@@ -105,7 +110,7 @@ void main() {
     );
 
     await expectLater(
-      WalletService.getMnemonic(currentWallet!.mnemonicId!, 'Passw0rd!'),
+      WalletService.getMnemonic(currentWallet.mnemonicId!, 'Passw0rd!'),
       throwsA(isA<WalletAuthenticationException>()),
     );
     final mnemonic = await WalletService.getMnemonic(
