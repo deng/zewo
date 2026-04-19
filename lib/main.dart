@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:wallet/wallet.dart';
 
@@ -150,19 +151,30 @@ class _ZeroWalletAppState extends State<ZeroWalletApp> {
       child:
           Selector<
             UsageSettingsController,
-            ({ThemeMode themeMode, bool developerMode})
+            ({ThemeMode themeMode, bool developerMode, Locale? locale})
           >(
             selector: (_, controller) => (
               themeMode: controller.themeMode,
               developerMode: controller.developerMode,
+              locale: controller.locale,
             ),
             builder: (context, usageSettings, child) {
+              WalletLocalizationManager.instance.setLocale(
+                usageSettings.locale,
+              );
               return MaterialApp(
                 title: 'Zero Wallet',
                 onGenerateRoute: WalletRoutes.onGenerateRoute,
                 theme: _lightTheme,
                 darkTheme: _darkTheme,
                 themeMode: usageSettings.themeMode,
+                locale: usageSettings.locale,
+                supportedLocales: WalletLocalizations.supportedLocales,
+                localizationsDelegates: const [
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
                 builder: (context, child) {
                   if (child == null || !usageSettings.developerMode) {
                     return child ?? const SizedBox.shrink();
