@@ -30,9 +30,13 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
   static const _darkScaffoldColor = Color(0xFF0F131B);
   static const _themeRadius = 16.0;
 
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   late final WalletProvider _walletProvider;
   late final UsageSettingsController _usageSettingsController;
+  late final SecuritySettingsController _securitySettingsController;
+  late final AppLockController _appLockController;
   String? _appliedLocalizationToken;
+  bool _appLockDialogVisible = false;
 
   late final ThemeData _lightTheme = _buildTheme(Brightness.light);
 
@@ -77,7 +81,7 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
         fillColor: inputFillColor,
         labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
         hintStyle: TextStyle(
-          color: colorScheme.onSurfaceVariant.withOpacity(0.72),
+          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.72),
         ),
         border: inputBorder(colorScheme.outlineVariant),
         enabledBorder: inputBorder(colorScheme.outlineVariant),
@@ -130,12 +134,22 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
     _usageSettingsController = UsageSettingsController();
     _usageSettingsController.addListener(_handleUsageSettingsChanged);
     _usageSettingsController.initialize();
+    _securitySettingsController = SecuritySettingsController();
+    _securitySettingsController.initialize();
+    _appLockController = AppLockController(
+      securitySettingsController: _securitySettingsController,
+      walletProvider: _walletProvider,
+    );
+    _appLockController.addListener(_handleAppLockChanged);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _appLockController.removeListener(_handleAppLockChanged);
     _usageSettingsController.removeListener(_handleUsageSettingsChanged);
+    _appLockController.dispose();
+    _securitySettingsController.dispose();
     _usageSettingsController.dispose();
     _walletProvider.dispose();
     // 在应用关闭时释放 AppLifecycleManager 的资源
@@ -150,8 +164,63 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
     }
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appLockController.handleAppLifecycleState(state);
+  }
+
   void _handleUsageSettingsChanged() {
     _syncWalletLocalization(_usageSettingsController.locale);
+  }
+
+  void _handleAppLockChanged() {
+    if (_appLockController.isLocked) {
+      _showAppLockDialogIfNeeded();
+      return;
+    }
+    _dismissAppLockDialogIfNeeded();
+  }
+
+  void _showAppLockDialogIfNeeded() {
+    if (_appLockDialogVisible) {
+      return;
+    }
+    final context = _navigatorKey.currentContext;
+    if (context == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showAppLockDialogIfNeeded();
+      });
+      return;
+    }
+
+    _appLockDialogVisible = true;
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'app-lock',
+      barrierColor: Colors.transparent,
+      pageBuilder: (dialogContext, _, __) {
+        return _AppLockDialog(controller: _appLockController);
+      },
+    ).whenComplete(() {
+      _appLockDialogVisible = false;
+      if (_appLockController.isLocked) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showAppLockDialogIfNeeded();
+        });
+      }
+    });
+  }
+
+  void _dismissAppLockDialogIfNeeded() {
+    if (!_appLockDialogVisible) {
+      return;
+    }
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null || !navigator.canPop()) {
+      return;
+    }
+    navigator.pop();
   }
 
   void _syncWalletLocalization(Locale? locale) {
@@ -179,6 +248,12 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
         ChangeNotifierProvider<UsageSettingsController>.value(
           value: _usageSettingsController,
         ),
+        ChangeNotifierProvider<SecuritySettingsController>.value(
+          value: _securitySettingsController,
+        ),
+        ChangeNotifierProvider<AppLockController>.value(
+          value: _appLockController,
+        ),
       ],
       child:
           Selector<
@@ -192,6 +267,7 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
             ),
             builder: (context, usageSettings, child) {
               return MaterialApp(
+                navigatorKey: _navigatorKey,
                 title: 'Zero Wallet',
                 onGenerateRoute: WalletRoutes.onGenerateRoute,
                 theme: _lightTheme,
@@ -205,19 +281,156 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
                   GlobalCupertinoLocalizations.delegate,
                 ],
                 builder: (context, child) {
-                  if (child == null || !usageSettings.developerMode) {
-                    return child ?? const SizedBox.shrink();
-                  }
-                  return Banner(
-                    message: 'DEV',
-                    location: BannerLocation.topEnd,
-                    child: child,
-                  );
+                  final content = child ?? const SizedBox.shrink();
+                  return usageSettings.developerMode
+                      ? Banner(
+                          message: 'DEV',
+                          location: BannerLocation.topEnd,
+                          child: content,
+                        )
+                      : content;
                 },
                 home: const MainPage(),
               );
             },
           ),
+    );
+  }
+}
+
+class _AppLockDialog extends StatefulWidget {
+  const _AppLockDialog({required this.controller});
+
+  final AppLockController controller;
+
+  @override
+  State<_AppLockDialog> createState() => _AppLockDialogState();
+}
+
+class _AppLockDialogState extends State<_AppLockDialog> {
+  final TextEditingController _passwordController = TextEditingController();
+  bool _passwordVisible = false;
+  String? _validationError;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _unlock() async {
+    final l10n = context.l10n;
+    final password = _passwordController.text;
+    if (password.isEmpty) {
+      setState(() {
+        _validationError = l10n.appLockPasswordRequired;
+      });
+      return;
+    }
+
+    setState(() {
+      _validationError = null;
+    });
+    final unlocked = await widget.controller.unlock(password);
+    if (unlocked) {
+      _passwordController.clear();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+    final errorText = _validationError ?? widget.controller.unlockError;
+
+    return PopScope(
+      canPop: false,
+      child: Material(
+        color: colorScheme.surface.withValues(alpha: 0.92),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Card(
+              margin: const EdgeInsets.all(24),
+              color: colorScheme.surfaceContainerHigh,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  key: const Key('app_lock_overlay'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.lock_outline,
+                      size: 40,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.appLockTitle,
+                      key: const Key('app_lock_title'),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.controller.currentWalletName == null
+                          ? l10n.appLockSubtitle
+                          : '${widget.controller.currentWalletName}\n${l10n.appLockSubtitle}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      key: const Key('app_lock_password_field'),
+                      controller: _passwordController,
+                      obscureText: !_passwordVisible,
+                      onChanged: (_) {
+                        if (_validationError != null) {
+                          setState(() {
+                            _validationError = null;
+                          });
+                        }
+                        widget.controller.clearUnlockError();
+                      },
+                      decoration: InputDecoration(
+                        labelText: l10n.appLockPasswordLabel,
+                        errorText: errorText,
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _passwordVisible = !_passwordVisible;
+                            });
+                          },
+                          icon: Icon(
+                            _passwordVisible
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        key: const Key('app_lock_unlock_button'),
+                        onPressed: widget.controller.isUnlocking
+                            ? null
+                            : _unlock,
+                        child: Text(
+                          widget.controller.isUnlocking
+                              ? l10n.appLockUnlocking
+                              : l10n.appLockUnlock,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
