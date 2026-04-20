@@ -21,6 +21,8 @@ PODS:
     - FlutterMacOS
   - url_launcher_ios (0.0.1):
     - Flutter
+  - wallet (0.0.1):
+    - Flutter
   - workmanager_apple (0.0.1):
     - Flutter
 
@@ -35,6 +37,7 @@ DEPENDENCIES:
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
+  - wallet (from `.symlinks/plugins/wallet/ios`)
   - workmanager_apple (from `.symlinks/plugins/workmanager_apple/ios`)
 
 EXTERNAL SOURCES:
@@ -58,6 +61,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   url_launcher_ios:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
+  wallet:
+    :path: ".symlinks/plugins/wallet/ios"
   workmanager_apple:
     :path: ".symlinks/plugins/workmanager_apple/ios"
 
@@ -72,6 +77,7 @@ SPEC CHECKSUMS:
   share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
+  wallet: ed54e17d4048f54ed5c6a6d36e3c86ef03545879
   workmanager_apple: 904529ae31e97fc5be632cf628507652294a0778
 
 PODFILE CHECKSUM: e30f02f9d1c72c47bb6344a0a748c9d268180865
