@@ -182,12 +182,18 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
   }
 
   void _showAppLockDialogIfNeeded() {
+    if (!mounted) {
+      return;
+    }
     if (_appLockDialogVisible) {
       return;
     }
     final context = _navigatorKey.currentContext;
     if (context == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
         _showAppLockDialogIfNeeded();
       });
       return;
@@ -203,9 +209,15 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
         return _AppLockDialog(controller: _appLockController);
       },
     ).whenComplete(() {
+      if (!mounted) {
+        return;
+      }
       _appLockDialogVisible = false;
       if (_appLockController.isLocked) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) {
+            return;
+          }
           _showAppLockDialogIfNeeded();
         });
       }
@@ -220,6 +232,7 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
     if (navigator == null || !navigator.canPop()) {
       return;
     }
+    _appLockDialogVisible = false;
     navigator.pop();
   }
 
@@ -342,119 +355,125 @@ class _AppLockDialogState extends State<_AppLockDialog> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = context.l10n;
-    final errorText = _validationError ?? widget.controller.unlockError;
-    final isBusy =
-        widget.controller.isUnlocking ||
-        widget.controller.isUnlockingWithBiometrics;
-
-    if (!_didAttemptBiometricUnlock &&
-        widget.controller.canUseBiometricUnlock) {
-      _didAttemptBiometricUnlock = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && widget.controller.isLocked) {
-          _unlockWithBiometrics();
-        }
-      });
-    }
 
     return PopScope(
       canPop: false,
-      child: Material(
-        color: colorScheme.surface.withValues(alpha: 0.92),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
-            child: Card(
-              margin: const EdgeInsets.all(24),
-              color: colorScheme.surfaceContainerHigh,
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  key: const Key('app_lock_overlay'),
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.lock_outline,
-                      size: 40,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.appLockTitle,
-                      key: const Key('app_lock_title'),
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.controller.currentWalletName == null
-                          ? l10n.appLockSubtitle
-                          : '${widget.controller.currentWalletName}\n${l10n.appLockSubtitle}',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: colorScheme.onSurfaceVariant),
-                    ),
-                    const SizedBox(height: 20),
-                    TextField(
-                      key: const Key('app_lock_password_field'),
-                      controller: _passwordController,
-                      enabled: !isBusy,
-                      obscureText: !_passwordVisible,
-                      onChanged: (_) {
-                        if (_validationError != null) {
-                          setState(() {
-                            _validationError = null;
-                          });
-                        }
-                        widget.controller.clearUnlockError();
-                      },
-                      decoration: InputDecoration(
-                        labelText: l10n.appLockPasswordLabel,
-                        errorText: errorText,
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _passwordVisible = !_passwordVisible;
-                            });
+      child: ListenableBuilder(
+        listenable: widget.controller,
+        builder: (context, _) {
+          final errorText = _validationError ?? widget.controller.unlockError;
+          final isBusy =
+              widget.controller.isUnlocking ||
+              widget.controller.isUnlockingWithBiometrics;
+
+          if (!_didAttemptBiometricUnlock &&
+              widget.controller.canUseBiometricUnlock) {
+            _didAttemptBiometricUnlock = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && widget.controller.isLocked) {
+                _unlockWithBiometrics();
+              }
+            });
+          }
+
+          return Material(
+            color: colorScheme.surface.withValues(alpha: 0.92),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: Card(
+                  margin: const EdgeInsets.all(24),
+                  color: colorScheme.surfaceContainerHigh,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      key: const Key('app_lock_overlay'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.lock_outline,
+                          size: 40,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          l10n.appLockTitle,
+                          key: const Key('app_lock_title'),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.controller.currentWalletName == null
+                              ? l10n.appLockSubtitle
+                              : '${widget.controller.currentWalletName}\n${l10n.appLockSubtitle}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          key: const Key('app_lock_password_field'),
+                          controller: _passwordController,
+                          enabled: !isBusy,
+                          obscureText: !_passwordVisible,
+                          onChanged: (_) {
+                            if (_validationError != null) {
+                              setState(() {
+                                _validationError = null;
+                              });
+                            }
+                            widget.controller.clearUnlockError();
                           },
-                          icon: Icon(
-                            _passwordVisible
-                                ? Icons.visibility_off
-                                : Icons.visibility,
+                          decoration: InputDecoration(
+                            labelText: l10n.appLockPasswordLabel,
+                            errorText: errorText,
+                            suffixIcon: IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _passwordVisible = !_passwordVisible;
+                                });
+                              },
+                              icon: Icon(
+                                _passwordVisible
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        key: const Key('app_lock_unlock_button'),
-                        onPressed: isBusy ? null : _unlock,
-                        child: Text(
-                          widget.controller.isUnlocking
-                              ? l10n.appLockUnlocking
-                              : l10n.appLockUnlock,
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            key: const Key('app_lock_unlock_button'),
+                            onPressed: isBusy ? null : _unlock,
+                            child: Text(
+                              widget.controller.isUnlocking
+                                  ? l10n.appLockUnlocking
+                                  : l10n.appLockUnlock,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (widget.controller.canUseBiometricUnlock) ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              key: const Key('app_lock_biometric_button'),
+                              onPressed: isBusy ? null : _unlockWithBiometrics,
+                              icon: const Icon(Icons.fingerprint),
+                              label: Text(l10n.appLockBiometricUnlock),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    if (widget.controller.canUseBiometricUnlock) ...[
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          key: const Key('app_lock_biometric_button'),
-                          onPressed: isBusy ? null : _unlockWithBiometrics,
-                          icon: const Icon(Icons.fingerprint),
-                          label: Text(l10n.appLockBiometricUnlock),
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
