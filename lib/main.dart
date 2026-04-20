@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:wallet/wallet.dart';
 
@@ -22,11 +23,16 @@ class ZeroWalletApp extends StatefulWidget {
   State<ZeroWalletApp> createState() => _ZeroWalletAppState();
 }
 
-class _ZeroWalletAppState extends State<ZeroWalletApp> {
+class _ZeroWalletAppState extends State<ZeroWalletApp>
+    with WidgetsBindingObserver {
   static const _themeSeedColor = Color(0xFF3D6BFF);
   static const _lightScaffoldColor = Color(0xFFF4F7FB);
   static const _darkScaffoldColor = Color(0xFF0F131B);
   static const _themeRadius = 16.0;
+
+  late final WalletProvider _walletProvider;
+  late final UsageSettingsController _usageSettingsController;
+  String? _appliedLocalizationToken;
 
   late final ThemeData _lightTheme = _buildTheme(Brightness.light);
 
@@ -118,13 +124,50 @@ class _ZeroWalletAppState extends State<ZeroWalletApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _walletProvider = WalletProvider();
+    _walletProvider.initialize();
+    _usageSettingsController = UsageSettingsController();
+    _usageSettingsController.addListener(_handleUsageSettingsChanged);
+    _usageSettingsController.initialize();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _usageSettingsController.removeListener(_handleUsageSettingsChanged);
+    _usageSettingsController.dispose();
+    _walletProvider.dispose();
     // 在应用关闭时释放 AppLifecycleManager 的资源
     AppLifecycleManager.instance.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    if (_usageSettingsController.language == AppLanguage.system) {
+      _syncWalletLocalization(_usageSettingsController.locale);
+    }
+  }
+
+  void _handleUsageSettingsChanged() {
+    _syncWalletLocalization(_usageSettingsController.locale);
+  }
+
+  void _syncWalletLocalization(Locale? locale) {
+    final nextToken = _localizationToken(locale);
+    if (_appliedLocalizationToken == nextToken) {
+      return;
+    }
+    _appliedLocalizationToken = nextToken;
+    WalletLocalizationManager.instance.setLocale(locale);
+  }
+
+  String _localizationToken(Locale? locale) {
+    if (locale != null) {
+      return locale.toLanguageTag();
+    }
+    return 'system:${WidgetsBinding.instance.platformDispatcher.locale.toLanguageTag()}';
   }
 
   @override
@@ -132,29 +175,20 @@ class _ZeroWalletAppState extends State<ZeroWalletApp> {
     return MultiProvider(
       providers: [
         // 来自 wallet 库的 WalletProvider
-        ChangeNotifierProvider(
-          create: (context) {
-            final provider = WalletProvider();
-            provider.initialize();
-            return provider;
-          },
-        ),
-        ChangeNotifierProvider(
-          create: (context) {
-            final controller = UsageSettingsController();
-            controller.initialize();
-            return controller;
-          },
+        ChangeNotifierProvider<WalletProvider>.value(value: _walletProvider),
+        ChangeNotifierProvider<UsageSettingsController>.value(
+          value: _usageSettingsController,
         ),
       ],
       child:
           Selector<
             UsageSettingsController,
-            ({ThemeMode themeMode, bool developerMode})
+            ({ThemeMode themeMode, bool developerMode, Locale? locale})
           >(
             selector: (_, controller) => (
               themeMode: controller.themeMode,
               developerMode: controller.developerMode,
+              locale: controller.locale,
             ),
             builder: (context, usageSettings, child) {
               return MaterialApp(
@@ -163,6 +197,13 @@ class _ZeroWalletAppState extends State<ZeroWalletApp> {
                 theme: _lightTheme,
                 darkTheme: _darkTheme,
                 themeMode: usageSettings.themeMode,
+                locale: usageSettings.locale,
+                supportedLocales: WalletLocalizations.supportedLocales,
+                localizationsDelegates: const [
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
                 builder: (context, child) {
                   if (child == null || !usageSettings.developerMode) {
                     return child ?? const SizedBox.shrink();

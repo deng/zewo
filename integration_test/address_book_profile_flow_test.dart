@@ -26,7 +26,10 @@ void main() {
       find.byKey(const Key('address_book_page_title')),
     );
 
-    await expectTextVisible(tester, '还没有联系人');
+    await pumpUntilVisible(
+      tester,
+      find.byKey(const Key('address_book_empty_title')),
+    );
     await pumpUntilVisible(
       tester,
       find.byKey(const Key('address_book_empty_add_button')),

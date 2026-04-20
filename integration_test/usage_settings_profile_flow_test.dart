@@ -56,7 +56,7 @@ void main() {
     await pumpUntilVisible(tester, languageValueFinder);
     await pumpUntilVisible(tester, themeValueFinder);
     expect(tester.widget<Text>(languageValueFinder).data, 'English');
-    expect(tester.widget<Text>(themeValueFinder).data, '浅色');
+    expect(tester.widget<Text>(themeValueFinder).data, 'Light');
 
     final developerSwitch = tester.widget<SwitchListTile>(
       find.byKey(const Key('usage_settings_developer_switch')),
