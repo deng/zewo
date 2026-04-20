@@ -59,6 +59,23 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tapAndPump(
+      tester,
+      find.byKey(const Key('security_settings_change_password_tile')),
+    );
+    await pumpUntilVisible(
+      tester,
+      find.byKey(const Key('sensitive_action_confirm_title')),
+    );
+    await tapAndPump(
+      tester,
+      find.byKey(const Key('sensitive_action_confirm_cancel_button')),
+    );
+    await pumpUntilVisible(
+      tester,
+      find.byKey(const Key('security_settings_page_title')),
+    );
+
     await tester.tap(
       find.byKey(const Key('security_settings_sensitive_confirm_switch')),
     );
