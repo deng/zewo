@@ -36,8 +36,8 @@ void main() {
       find.byKey(const Key('manage_custom_evm_networks_title')),
     );
 
-    await tester.pageBack();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
     await pumpUntilVisible(
       tester,
       find.byKey(const Key('network_settings_manage_tron_tile')),
