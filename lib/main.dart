@@ -310,6 +310,7 @@ class _AppLockDialog extends StatefulWidget {
 class _AppLockDialogState extends State<_AppLockDialog> {
   final TextEditingController _passwordController = TextEditingController();
   bool _passwordVisible = false;
+  bool _didAttemptBiometricUnlock = false;
   String? _validationError;
 
   @override
@@ -342,6 +343,19 @@ class _AppLockDialogState extends State<_AppLockDialog> {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = context.l10n;
     final errorText = _validationError ?? widget.controller.unlockError;
+    final isBusy =
+        widget.controller.isUnlocking ||
+        widget.controller.isUnlockingWithBiometrics;
+
+    if (!_didAttemptBiometricUnlock &&
+        widget.controller.canUseBiometricUnlock) {
+      _didAttemptBiometricUnlock = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.controller.isLocked) {
+          _unlockWithBiometrics();
+        }
+      });
+    }
 
     return PopScope(
       canPop: false,
@@ -383,6 +397,7 @@ class _AppLockDialogState extends State<_AppLockDialog> {
                     TextField(
                       key: const Key('app_lock_password_field'),
                       controller: _passwordController,
+                      enabled: !isBusy,
                       obscureText: !_passwordVisible,
                       onChanged: (_) {
                         if (_validationError != null) {
@@ -414,9 +429,7 @@ class _AppLockDialogState extends State<_AppLockDialog> {
                       width: double.infinity,
                       child: ElevatedButton(
                         key: const Key('app_lock_unlock_button'),
-                        onPressed: widget.controller.isUnlocking
-                            ? null
-                            : _unlock,
+                        onPressed: isBusy ? null : _unlock,
                         child: Text(
                           widget.controller.isUnlocking
                               ? l10n.appLockUnlocking
@@ -424,6 +437,18 @@ class _AppLockDialogState extends State<_AppLockDialog> {
                         ),
                       ),
                     ),
+                    if (widget.controller.canUseBiometricUnlock) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          key: const Key('app_lock_biometric_button'),
+                          onPressed: isBusy ? null : _unlockWithBiometrics,
+                          icon: const Icon(Icons.fingerprint),
+                          label: Text(l10n.appLockBiometricUnlock),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -432,5 +457,12 @@ class _AppLockDialogState extends State<_AppLockDialog> {
         ),
       ),
     );
+  }
+
+  Future<void> _unlockWithBiometrics() async {
+    setState(() {
+      _validationError = null;
+    });
+    await widget.controller.unlockWithBiometrics();
   }
 }
