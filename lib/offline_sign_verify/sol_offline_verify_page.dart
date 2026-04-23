@@ -4,7 +4,10 @@ import 'package:wallet/wallet.dart';
 import 'evm_offline_result_page.dart';
 
 class SolOfflineVerifyPage extends StatefulWidget {
-  const SolOfflineVerifyPage({super.key});
+  SolOfflineVerifyPage({super.key, OfflineSignVerifyService? service})
+    : service = service ?? OfflineSignVerifyService();
+
+  final OfflineSignVerifyService service;
 
   @override
   State<SolOfflineVerifyPage> createState() => _SolOfflineVerifyPageState();
@@ -15,7 +18,6 @@ class _SolOfflineVerifyPageState extends State<SolOfflineVerifyPage> {
   final _signatureController = TextEditingController();
   final _publicKeyController = TextEditingController();
   final _expectedAddressController = TextEditingController();
-  final _service = OfflineSignVerifyService();
   PayloadEncoding _payloadEncoding = PayloadEncoding.utf8;
   SignatureEncoding _signatureEncoding = SignatureEncoding.hex;
   bool _isSubmitting = false;
@@ -156,6 +158,7 @@ class _SolOfflineVerifyPageState extends State<SolOfflineVerifyPage> {
           ],
           const SizedBox(height: 20),
           ElevatedButton(
+            key: const Key('sol_offline_verify_submit_button'),
             onPressed: _isSubmitting ? null : _verify,
             child: Text(_isSubmitting ? '验证中...' : '开始验证'),
           ),
@@ -192,6 +195,14 @@ class _SolOfflineVerifyPageState extends State<SolOfflineVerifyPage> {
           Text(body),
           const SizedBox(height: 12),
           TextField(
+            key: switch (title) {
+              '签名' => const Key('sol_offline_verify_signature_field'),
+              'Signer Public Key' => const Key(
+                'sol_offline_verify_public_key_field',
+              ),
+              '期望地址' => const Key('sol_offline_verify_expected_address_field'),
+              _ => const Key('sol_offline_verify_payload_field'),
+            },
             controller: controller,
             minLines: minLines,
             maxLines: maxLines,
@@ -243,7 +254,7 @@ class _SolOfflineVerifyPageState extends State<SolOfflineVerifyPage> {
             : _expectedAddressController.text.trim(),
       );
 
-      final result = await _service.verify(request);
+      final result = await widget.service.verify(request);
 
       if (!mounted) return;
       Navigator.of(context).push(
