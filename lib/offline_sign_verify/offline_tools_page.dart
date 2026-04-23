@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'evm_offline_sign_page.dart';
 import 'evm_offline_verify_page.dart';
+import 'sol_offline_verify_page.dart';
 
 class OfflineToolsPage extends StatelessWidget {
   const OfflineToolsPage({super.key});
@@ -51,6 +52,19 @@ class OfflineToolsPage extends StatelessWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const EvmOfflineVerifyPage(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            _ActionCard(
+              title: 'SOL 验签',
+              subtitle: '对 Solana raw message 签名做本地 Ed25519 验签和地址匹配。',
+              icon: Icons.key_outlined,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SolOfflineVerifyPage(),
                   ),
                 );
               },
