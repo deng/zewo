@@ -37,9 +37,7 @@ class OfflineToolsPage extends StatelessWidget {
               icon: Icons.edit_note,
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const EvmOfflineSignPage(),
-                  ),
+                  MaterialPageRoute<void>(builder: (_) => EvmOfflineSignPage()),
                 );
               },
             ),
@@ -51,7 +49,7 @@ class OfflineToolsPage extends StatelessWidget {
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const EvmOfflineVerifyPage(),
+                    builder: (_) => EvmOfflineVerifyPage(),
                   ),
                 );
               },

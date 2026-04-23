@@ -18,7 +18,10 @@ enum _SignPayloadKind {
 }
 
 class EvmOfflineSignPage extends StatefulWidget {
-  const EvmOfflineSignPage({super.key});
+  EvmOfflineSignPage({super.key, OfflineSignVerifyService? service})
+    : service = service ?? OfflineSignVerifyService();
+
+  final OfflineSignVerifyService service;
 
   @override
   State<EvmOfflineSignPage> createState() => _EvmOfflineSignPageState();
@@ -27,7 +30,6 @@ class EvmOfflineSignPage extends StatefulWidget {
 class _EvmOfflineSignPageState extends State<EvmOfflineSignPage> {
   final _payloadController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _service = OfflineSignVerifyService();
   _SignPayloadKind _payloadKind = _SignPayloadKind.message;
   PayloadEncoding _messageEncoding = PayloadEncoding.utf8;
   bool _isSubmitting = false;
@@ -74,6 +76,7 @@ class _EvmOfflineSignPageState extends State<EvmOfflineSignPage> {
           ],
           const SizedBox(height: 20),
           ElevatedButton(
+            key: const Key('evm_offline_sign_submit_button'),
             onPressed: !isEvmWallet || _isSubmitting
                 ? null
                 : () => _sign(context),
@@ -212,6 +215,7 @@ class _EvmOfflineSignPageState extends State<EvmOfflineSignPage> {
           Text(_payloadHintBody),
           const SizedBox(height: 12),
           TextField(
+            key: const Key('evm_offline_sign_payload_field'),
             controller: _payloadController,
             minLines: 8,
             maxLines: 16,
@@ -241,6 +245,7 @@ class _EvmOfflineSignPageState extends State<EvmOfflineSignPage> {
           ),
           const SizedBox(height: 12),
           TextField(
+            key: const Key('evm_offline_sign_password_field'),
             controller: _passwordController,
             obscureText: true,
             decoration: const InputDecoration(hintText: '输入当前钱包密码以完成签名'),
@@ -288,7 +293,7 @@ class _EvmOfflineSignPageState extends State<EvmOfflineSignPage> {
         payloadEncoding: _payloadEncoding,
         signingStandard: _signingStandard,
       );
-      final result = await _service.sign(
+      final result = await widget.service.sign(
         request,
         password: _passwordController.text,
       );

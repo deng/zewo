@@ -18,7 +18,10 @@ enum _VerifyPayloadKind {
 }
 
 class EvmOfflineVerifyPage extends StatefulWidget {
-  const EvmOfflineVerifyPage({super.key});
+  EvmOfflineVerifyPage({super.key, OfflineSignVerifyService? service})
+    : service = service ?? OfflineSignVerifyService();
+
+  final OfflineSignVerifyService service;
 
   @override
   State<EvmOfflineVerifyPage> createState() => _EvmOfflineVerifyPageState();
@@ -28,7 +31,6 @@ class _EvmOfflineVerifyPageState extends State<EvmOfflineVerifyPage> {
   final _payloadController = TextEditingController();
   final _signatureController = TextEditingController();
   final _expectedAddressController = TextEditingController();
-  final _service = OfflineSignVerifyService();
   _VerifyPayloadKind _payloadKind = _VerifyPayloadKind.message;
   PayloadEncoding _messageEncoding = PayloadEncoding.utf8;
   ChainType _selectedChain = ChainType.eth;
@@ -222,6 +224,7 @@ class _EvmOfflineVerifyPageState extends State<EvmOfflineVerifyPage> {
           ],
           const SizedBox(height: 20),
           ElevatedButton(
+            key: const Key('evm_offline_verify_submit_button'),
             onPressed: _isSubmitting ? null : () => _verify(context),
             child: Text(_isSubmitting ? '验证中...' : '开始验证'),
           ),
@@ -258,6 +261,13 @@ class _EvmOfflineVerifyPageState extends State<EvmOfflineVerifyPage> {
           Text(body),
           const SizedBox(height: 12),
           TextField(
+            key: switch (title) {
+              '签名' => const Key('evm_offline_verify_signature_field'),
+              '期望签名地址' => const Key(
+                'evm_offline_verify_expected_address_field',
+              ),
+              _ => const Key('evm_offline_verify_payload_field'),
+            },
             controller: controller,
             minLines: minLines,
             maxLines: maxLines,
@@ -300,7 +310,7 @@ class _EvmOfflineVerifyPageState extends State<EvmOfflineVerifyPage> {
             ? null
             : _expectedAddressController.text.trim(),
       );
-      final result = await _service.verify(request);
+      final result = await widget.service.verify(request);
 
       if (!mounted) return;
       Navigator.of(context).push(
@@ -343,8 +353,9 @@ class _EvmOfflineVerifyPageState extends State<EvmOfflineVerifyPage> {
       case _VerifyPayloadKind.message:
         return _messageEncoding;
       case _VerifyPayloadKind.typedData:
-      case _VerifyPayloadKind.transaction:
         return PayloadEncoding.json;
+      case _VerifyPayloadKind.transaction:
+        return PayloadEncoding.hex;
     }
   }
 
