@@ -3,8 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:wallet/wallet.dart';
 
-import 'package:zero/offline_sign_verify/offline_tools_page.dart';
-
 class _FakeWalletProvider extends WalletProvider {
   _FakeWalletProvider(this._walletInfo);
 

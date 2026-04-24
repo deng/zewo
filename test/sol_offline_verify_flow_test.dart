@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wallet/wallet.dart';
 
-import 'package:zero/offline_sign_verify/sol_offline_verify_page.dart';
-
 class _FakeSolOfflineSignVerifyService extends OfflineSignVerifyService {
   _FakeSolOfflineSignVerifyService();
 

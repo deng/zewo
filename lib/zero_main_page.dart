@@ -6,8 +6,7 @@ import 'package:wallet/src/ui/pages/profile_page.dart';
 import 'package:wallet/src/ui/pages/wallet_home_page.dart';
 import 'package:wallet/src/ui/widgets/bottom_navigation_bar.dart';
 import 'package:wallet/src/ui/widgets/wallet_scaffold.dart';
-
-import 'offline_sign_verify/offline_tools_page.dart';
+import 'package:wallet/wallet.dart' hide WalletProvider;
 
 class ZeroMainPage extends StatefulWidget {
   const ZeroMainPage({super.key});
@@ -46,7 +45,7 @@ class _ZeroMainPageState extends State<ZeroMainPage> {
     final theme = Theme.of(context);
     final pages = <Widget>[
       WalletHomePage(),
-      const OfflineToolsPage(),
+      OfflineToolsPage(),
       const ProfilePage(),
     ];
 
@@ -67,7 +66,7 @@ class _ZeroMainPageState extends State<ZeroMainPage> {
     final theme = Theme.of(context);
     final pages = <Widget>[
       const HomeContent(),
-      const OfflineToolsPage(),
+      OfflineToolsPage(),
       const ProfilePage(),
     ];
 
