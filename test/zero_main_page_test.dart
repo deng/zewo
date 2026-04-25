@@ -67,4 +67,53 @@ void main() {
     expect(find.text('签名工具'), findsOneWidget);
     expect(find.text('离线签名'), findsOneWidget);
   });
+
+  testWidgets(
+    'ZeroMainPage transaction tab shows wallet OfflineToolsPage for non-EVM wallet',
+    (WidgetTester tester) async {
+      final wallet = WalletInfo(
+        id: 'wallet-2',
+        name: 'SOL Wallet',
+        createdAt: DateTime.utc(2026, 1, 1),
+        type: WalletType.mnemonic,
+        chainType: ChainType.sol,
+        networkType: NetworkType.mainnet,
+        architectureType: BlockchainArchitecture.solana,
+        chainId: 'sol-mainnet',
+        defaultAddressIndex: 0,
+        mnemonicId: 'mnemonic-2',
+      );
+      wallet.updateDefaultAddress(
+        CryptoAddress(
+          id: 'address-2',
+          address: 'So11111111111111111111111111111111111111112',
+          addressLower: 'so11111111111111111111111111111111111111112',
+          chainType: ChainType.sol,
+          networkType: NetworkType.mainnet,
+          architectureType: BlockchainArchitecture.solana,
+          derivationMode: DerivationMode.mnemonic,
+          accountIndex: 0,
+          changeIndex: 0,
+          addressIndex: 0,
+          publicKey: '',
+          path: '',
+          createdAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<WalletProvider>.value(
+          value: _FakeWalletProvider(wallet),
+          child: const MaterialApp(home: ZeroMainPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('bottom_nav_transaction')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('签名工具'), findsOneWidget);
+      expect(find.text('SOL 验签'), findsOneWidget);
+    },
+  );
 }
