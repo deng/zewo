@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:bipx/bipx.dart';
 import 'package:wallet/wallet.dart';
+import 'package:wallet/src/models/chain_models.dart';
 
 import 'package:zero/zero_main_page.dart';
 
