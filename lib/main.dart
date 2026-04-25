@@ -3,8 +3,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:wallet/wallet.dart';
 
-import 'zero_main_page.dart';
-
 Future<void> main() async {
   await bootstrapZeroWalletApp();
 }
@@ -305,7 +303,7 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
                         )
                       : content;
                 },
-                home: const ZeroMainPage(),
+                home: const MainPage(),
               );
             },
           ),

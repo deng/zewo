@@ -5,8 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:wallet/wallet.dart';
 import 'package:wallet/src/models/chain_models.dart';
 
-import 'package:zero/zero_main_page.dart';
-
 class _FakeWalletProvider extends WalletProvider {
   _FakeWalletProvider(this._walletInfo);
 
@@ -21,7 +19,7 @@ class _FakeWalletProvider extends WalletProvider {
 
 void main() {
   testWidgets(
-    'ZeroMainPage builds without starting app-level background timers',
+    'wallet MainPage builds without starting app-level background timers',
     (WidgetTester tester) async {
       final wallet = WalletInfo(
         id: 'wallet-1',
@@ -56,7 +54,7 @@ void main() {
       await tester.pumpWidget(
         ChangeNotifierProvider<WalletProvider>.value(
           value: _FakeWalletProvider(wallet),
-          child: const MaterialApp(home: ZeroMainPage()),
+          child: const MaterialApp(home: MainPage()),
         ),
       );
       await tester.pumpAndSettle();
