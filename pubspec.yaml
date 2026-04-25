@@ -49,8 +49,6 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
-  bipx:
-    path: ../bipx
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
