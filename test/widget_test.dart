@@ -19,7 +19,7 @@ class _FakeWalletProvider extends WalletProvider {
 
 void main() {
   testWidgets(
-    'wallet MainPage builds without starting app-level background timers',
+    'wallet MainPage smoke build shows bottom navigation items',
     (WidgetTester tester) async {
       final wallet = WalletInfo(
         id: 'wallet-1',
