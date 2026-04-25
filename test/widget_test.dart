@@ -1,20 +1,28 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:wallet/wallet.dart';
 
-import 'package:zero/main.dart';
+class _EmptyWalletProvider extends WalletProvider {
+  @override
+  bool get isLoading => false;
+
+  @override
+  WalletInfo? get currentWallet => null;
+}
 
 void main() {
-  testWidgets('Zero Wallet app compiles and runs', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const ZeroWalletApp());
+  testWidgets('MainPage smoke build with no wallet', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider<WalletProvider>.value(
+        value: _EmptyWalletProvider(),
+        child: const MaterialApp(home: MainPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-    // Verify that our app starts correctly by looking for the app title
-    expect(find.text('Zero Wallet'), findsOneWidget);
+    expect(find.byKey(const Key('bottom_nav_home')), findsOneWidget);
+    expect(find.byKey(const Key('bottom_nav_transaction')), findsOneWidget);
+    expect(find.byKey(const Key('bottom_nav_profile')), findsOneWidget);
   });
 }
