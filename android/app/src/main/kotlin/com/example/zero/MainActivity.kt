@@ -21,7 +21,11 @@ class MainActivity : FlutterFragmentActivity() {
             methodChannelName,
         ).setMethodCallHandler { call: MethodCall, result: MethodChannel.Result ->
             when (call.method) {
-                "getInitialLink" -> result.success(pendingLink ?: intent?.dataString)
+                "getInitialLink" -> {
+                    val link = pendingLink
+                    pendingLink = null
+                    result.success(link)
+                }
                 else -> result.notImplemented()
             }
         }

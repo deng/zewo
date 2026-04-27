@@ -46,6 +46,7 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
   late final SecuritySettingsController _securitySettingsController;
   late final AppLockController _appLockController;
   StreamSubscription<dynamic>? _deepLinkSubscription;
+  String? _consumedInitialDeepLink;
   String? _appliedLocalizationToken;
   bool _appLockDialogVisible = false;
   int _handledWalletConnectNavigationSerial = 0;
@@ -230,6 +231,7 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
         'getInitialLink',
       );
       if (initialLink != null && initialLink.isNotEmpty) {
+        _consumedInitialDeepLink = initialLink;
         await _walletConnectController.ingestPairingUri(
           initialLink,
           source: WalletConnectPairingSource.deepLink,
@@ -242,6 +244,11 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
         .receiveBroadcastStream()
         .listen((event) async {
           if (event is! String || event.isEmpty) {
+            return;
+          }
+          // Skip if this URI was already consumed via getInitialLink
+          if (event == _consumedInitialDeepLink) {
+            _consumedInitialDeepLink = null;
             return;
           }
           await _walletConnectController.ingestPairingUri(
