@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:wallet/wallet.dart';
+import 'package:zero_wallet/wallet.dart';
 
 import 'test_helpers.dart';
 import 'test_wallet_config.dart';
