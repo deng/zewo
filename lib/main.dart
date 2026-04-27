@@ -238,25 +238,36 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
           navigateToHome: true,
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[DeepLink] getInitialLink failed: $e');
+    }
 
     _deepLinkSubscription = _deepLinkEventChannel
         .receiveBroadcastStream()
-        .listen((event) async {
-          if (event is! String || event.isEmpty) {
-            return;
-          }
-          // Skip if this URI was already consumed via getInitialLink
-          if (event == _consumedInitialDeepLink) {
-            _consumedInitialDeepLink = null;
-            return;
-          }
-          await _walletConnectController.ingestPairingUri(
-            event,
-            source: WalletConnectPairingSource.deepLink,
-            navigateToHome: true,
-          );
-        }, onError: (_) {});
+        .listen((event) {
+          _handleDeepLinkEvent(event);
+        }, onError: (e) {
+          debugPrint('[DeepLink] event stream error: $e');
+        });
+  }
+
+  Future<void> _handleDeepLinkEvent(dynamic event) async {
+    if (event is! String || event.isEmpty) {
+      return;
+    }
+    if (event == _consumedInitialDeepLink) {
+      _consumedInitialDeepLink = null;
+      return;
+    }
+    try {
+      await _walletConnectController.ingestPairingUri(
+        event,
+        source: WalletConnectPairingSource.deepLink,
+        navigateToHome: true,
+      );
+    } catch (e) {
+      debugPrint('[DeepLink] ingest failed: $e');
+    }
   }
 
   void _handleWalletConnectChanged() {
