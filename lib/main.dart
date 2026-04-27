@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:wallet/wallet.dart';
+import 'package:zero_wallet/wallet.dart';
 
 Future<void> main() async {
   await bootstrapZeroWalletApp();
@@ -25,6 +28,12 @@ class ZeroWalletApp extends StatefulWidget {
 
 class _ZeroWalletAppState extends State<ZeroWalletApp>
     with WidgetsBindingObserver {
+  static const MethodChannel _deepLinkMethodChannel = MethodChannel(
+    'zero/deep_links',
+  );
+  static const EventChannel _deepLinkEventChannel = EventChannel(
+    'zero/deep_links/events',
+  );
   static const _themeSeedColor = Color(0xFF3D6BFF);
   static const _lightScaffoldColor = Color(0xFFF4F7FB);
   static const _darkScaffoldColor = Color(0xFF0F131B);
@@ -32,11 +41,14 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
 
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   late final WalletProvider _walletProvider;
+  late final WalletConnectController _walletConnectController;
   late final UsageSettingsController _usageSettingsController;
   late final SecuritySettingsController _securitySettingsController;
   late final AppLockController _appLockController;
+  StreamSubscription<dynamic>? _deepLinkSubscription;
   String? _appliedLocalizationToken;
   bool _appLockDialogVisible = false;
+  int _handledWalletConnectNavigationSerial = 0;
 
   late final ThemeData _lightTheme = _buildTheme(Brightness.light);
 
@@ -131,6 +143,33 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
     WidgetsBinding.instance.addObserver(this);
     _walletProvider = WalletProvider();
     _walletProvider.initialize();
+    const walletConnectConfig = WalletConnectAppConfig(
+      projectId: String.fromEnvironment(
+        'WC_PROJECT_ID',
+        defaultValue: 'de486c2bd6706504265538fac8bf5501',
+      ),
+      redirectScheme: 'zerowallet',
+      metadata: WalletConnectAppMetadata(
+        name: 'Zero Wallet',
+        description: 'Zero Wallet mobile app entry for WalletConnect flows.',
+        url: 'https://github.com/deng/zero-wallet-dapp-connect',
+        icons: <String>[
+          'https://raw.githubusercontent.com/deng/zero-wallet-dapp-connect/main/assets/icon.png',
+        ],
+      ),
+    );
+    _walletConnectController = WalletConnectController(
+      walletProvider: _walletProvider,
+      config: walletConnectConfig,
+      transportClient: walletConnectConfig.isConfigured
+          ? ReownWalletConnectTransportClient()
+          : const UnavailableWalletConnectTransportClient(
+              reason:
+                  'WalletConnect projectId is not configured. Rebuild with --dart-define=WC_PROJECT_ID=<your_project_id> to enable DApp connections.',
+            ),
+    );
+    _walletConnectController.addListener(_handleWalletConnectChanged);
+    _walletConnectController.initialize();
     _usageSettingsController = UsageSettingsController();
     _usageSettingsController.addListener(_handleUsageSettingsChanged);
     _usageSettingsController.initialize();
@@ -141,13 +180,17 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
       walletProvider: _walletProvider,
     );
     _appLockController.addListener(_handleAppLockChanged);
+    _listenForDeepLinks();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _deepLinkSubscription?.cancel();
+    _walletConnectController.removeListener(_handleWalletConnectChanged);
     _appLockController.removeListener(_handleAppLockChanged);
     _usageSettingsController.removeListener(_handleUsageSettingsChanged);
+    _walletConnectController.dispose();
     _appLockController.dispose();
     _securitySettingsController.dispose();
     _usageSettingsController.dispose();
@@ -179,6 +222,74 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
       return;
     }
     _dismissAppLockDialogIfNeeded();
+  }
+
+  Future<void> _listenForDeepLinks() async {
+    try {
+      final initialLink = await _deepLinkMethodChannel.invokeMethod<String>(
+        'getInitialLink',
+      );
+      if (initialLink != null && initialLink.isNotEmpty) {
+        await _walletConnectController.ingestPairingUri(
+          initialLink,
+          source: WalletConnectPairingSource.deepLink,
+          navigateToHome: true,
+        );
+      }
+    } catch (_) {}
+
+    _deepLinkSubscription = _deepLinkEventChannel
+        .receiveBroadcastStream()
+        .listen((event) async {
+          if (event is! String || event.isEmpty) {
+            return;
+          }
+          await _walletConnectController.ingestPairingUri(
+            event,
+            source: WalletConnectPairingSource.deepLink,
+            navigateToHome: true,
+          );
+        }, onError: (_) {});
+  }
+
+  void _handleWalletConnectChanged() {
+    final target = _walletConnectController.navigationTarget;
+    if (target == null ||
+        target.serial <= _handledWalletConnectNavigationSerial) {
+      return;
+    }
+    _handledWalletConnectNavigationSerial = target.serial;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final navigator = _navigatorKey.currentState;
+      if (navigator == null) {
+        return;
+      }
+      switch (target.destination) {
+        case WalletConnectNavigationDestination.home:
+          navigator.pushNamed(WalletRoutes.walletConnectHome);
+          break;
+        case WalletConnectNavigationDestination.proposalApproval:
+          navigator.pushNamed(
+            WalletRoutes.walletConnectProposalApproval,
+            arguments: WalletConnectProposalApprovalRouteArgs(
+              proposalId: target.proposalId!,
+            ),
+          );
+          break;
+        case WalletConnectNavigationDestination.requestApproval:
+          navigator.pushNamed(
+            WalletRoutes.walletConnectRequestApproval,
+            arguments: WalletConnectRequestApprovalRouteArgs(
+              requestId: target.requestId!,
+            ),
+          );
+          break;
+      }
+      _walletConnectController.clearNavigationTarget(target.serial);
+    });
   }
 
   void _showAppLockDialogIfNeeded() {
@@ -258,6 +369,9 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
       providers: [
         // 来自 wallet 库的 WalletProvider
         ChangeNotifierProvider<WalletProvider>.value(value: _walletProvider),
+        ChangeNotifierProvider<WalletConnectController>.value(
+          value: _walletConnectController,
+        ),
         ChangeNotifierProvider<UsageSettingsController>.value(
           value: _usageSettingsController,
         ),
