@@ -1147,8 +1147,8 @@ packages:
   zero_wallet:
     dependency: "direct main"
     description:
-      path: "/Users/dengzhizhong/data/repos/deng/ZeroWallet-dapp-connect/wallet"
-      relative: false
+      path: "../wallet"
+      relative: true
     source: path
     version: "0.0.1"
 sdks:
