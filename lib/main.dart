@@ -46,6 +46,7 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
   late final SecuritySettingsController _securitySettingsController;
   late final AppLockController _appLockController;
   StreamSubscription<dynamic>? _deepLinkSubscription;
+  String? _consumedInitialDeepLink;
   String? _appliedLocalizationToken;
   bool _appLockDialogVisible = false;
   int _handledWalletConnectNavigationSerial = 0;
@@ -146,7 +147,7 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
     const walletConnectConfig = WalletConnectAppConfig(
       projectId: String.fromEnvironment(
         'WC_PROJECT_ID',
-        defaultValue: 'de486c2bd6706504265538fac8bf5501',
+        defaultValue: '589379195ceab6e791dd510bf5feb122',
       ),
       redirectScheme: 'zerowallet',
       metadata: WalletConnectAppMetadata(
@@ -230,26 +231,43 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
         'getInitialLink',
       );
       if (initialLink != null && initialLink.isNotEmpty) {
+        _consumedInitialDeepLink = initialLink;
         await _walletConnectController.ingestPairingUri(
           initialLink,
           source: WalletConnectPairingSource.deepLink,
           navigateToHome: true,
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[DeepLink] getInitialLink failed: $e');
+    }
 
     _deepLinkSubscription = _deepLinkEventChannel
         .receiveBroadcastStream()
-        .listen((event) async {
-          if (event is! String || event.isEmpty) {
-            return;
-          }
-          await _walletConnectController.ingestPairingUri(
-            event,
-            source: WalletConnectPairingSource.deepLink,
-            navigateToHome: true,
-          );
-        }, onError: (_) {});
+        .listen((event) {
+          _handleDeepLinkEvent(event);
+        }, onError: (e) {
+          debugPrint('[DeepLink] event stream error: $e');
+        });
+  }
+
+  Future<void> _handleDeepLinkEvent(dynamic event) async {
+    if (event is! String || event.isEmpty) {
+      return;
+    }
+    if (event == _consumedInitialDeepLink) {
+      _consumedInitialDeepLink = null;
+      return;
+    }
+    try {
+      await _walletConnectController.ingestPairingUri(
+        event,
+        source: WalletConnectPairingSource.deepLink,
+        navigateToHome: true,
+      );
+    } catch (e) {
+      debugPrint('[DeepLink] ingest failed: $e');
+    }
   }
 
   void _handleWalletConnectChanged() {

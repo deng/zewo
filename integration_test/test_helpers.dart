@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:wallet/wallet.dart';
+import 'package:zero_wallet/wallet.dart';
 import 'package:zero/main.dart' as app;
 import 'test_wallet_config.dart';
 

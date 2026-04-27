@@ -25,7 +25,9 @@ import UIKit
         }
         switch call.method {
         case "getInitialLink":
-          result(self.pendingLink)
+          let link = self.pendingLink
+          self.pendingLink = nil
+          result(link)
         default:
           result(FlutterMethodNotImplemented)
         }
