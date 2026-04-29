@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'test_helpers.dart';
@@ -223,7 +222,11 @@ void main() {
       settle: const Duration(seconds: 1),
     );
 
-    // ---- Verify no errors ----
-    await tester.pump(const Duration(seconds: 2));
+    // ---- Verify all steps completed ----
+    await pumpUntilVisible(
+      tester,
+      find.text('ALL_OK'),
+      timeout: const Duration(seconds: 10),
+    );
   });
 }
