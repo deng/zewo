@@ -2788,12 +2788,20 @@ Future<void> addHdWalletByChainId(
     find.byKey(Key('hd_wallet_list_add_subwallet_$chainId')),
     settle: const Duration(seconds: 1),
   );
+
+  final continueButtonFinder =
+      find.byKey(const Key('sensitive_action_confirm_continue_button'));
   final passwordDialogFinder = find.byKey(
     const Key('password_verification_field'),
   );
   final walletHomeFinder = find.byKey(const Key('wallet_home_selector_button'));
-  final deadline = DateTime.now().add(const Duration(seconds: 8));
+  final deadline = DateTime.now().add(const Duration(seconds: 15));
   while (DateTime.now().isBefore(deadline)) {
+    // Dismiss the SensitiveOperationGuard confirmation dialog if present.
+    if (continueButtonFinder.evaluate().isNotEmpty) {
+      await tapAndPump(tester, continueButtonFinder);
+      continue;
+    }
     if (passwordDialogFinder.evaluate().isNotEmpty) {
       await unlockPasswordPrompt(tester, password: password);
       return;
