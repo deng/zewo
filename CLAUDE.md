@@ -41,11 +41,14 @@ flutter build apk --debug
 ./apk.sh
 ```
 
-**Proxy note:** In environments with restricted network access, use wrapper scripts in `tool/` which unset proxy env vars and set Chinese Flutter mirrors. Unit tests also need proxy unset to avoid test harness handshake failure.
+**Proxy note:** In environments with restricted network access, use wrapper scripts in `tool/` which unset proxy env vars and set Chinese Flutter mirrors. Unit tests also need proxy unset to avoid test harness handshake failure:
+```bash
+env -u http_proxy -u https_proxy flutter test
+```
 
 ## Architecture
 
-`lib/main.dart` is the only source file (~620 lines). It bootstraps the wallet package and sets up the app shell:
+`lib/main.dart` is the only source file. It bootstraps the wallet package and sets up the app shell:
 
 ```
 main()
@@ -78,11 +81,11 @@ main()
 ## Test Structure
 
 - **`test/`** — 2 widget/unit test files. `widget_test.dart` renders MainPage with empty WalletProvider and asserts bottom nav. `test_wallet_config_test.dart` tests integration test wallet config loading.
-- **`integration_test/`** — ~104 files organized by feature:
+- **`integration_test/`** — 100+ files organized by feature:
   - Wallet management (create/import/backup validation)
   - Chain transfer tests (16 chains, each with preflight, broadcast, wrong-password, cancel-password, zero-amount, self-transfer, insufficient-balance scenarios)
   - Profile/settings flow tests
-  - `test_helpers.dart` (~2950 lines) — shared helpers: test app bootstrap, UI interaction utilities (pumpUntilVisible, tapAndPump), chain-specific wallet creation, transaction status waiters
+  - `test_helpers.dart` — shared helpers: test app bootstrap, UI interaction utilities (pumpUntilVisible, tapAndPump), chain-specific wallet creation, transaction status waiters
   - `test_wallet_config.dart` — contract for loading funded test wallet configs from dart-define or local JSON file
   - `.test_wallet_config.json` (gitignored) — actual funded test wallet mnemonics
 
