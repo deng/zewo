@@ -27,17 +27,17 @@ String get _testDAppDataUri {
   <div class="log" id="log"></div>
   <script>
   (function() {
-    var $ = function(id) { return document.getElementById(id); };
+    var el = function(id) { return document.getElementById(id); };
     function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
-    function log(msg) { $('log').textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + $('log').textContent; }
+    function log(msg) { el('log').textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + el('log').textContent; }
 
     var sol = window.solana;
     if (!sol || !sol.isPhantom) {
-      $('status').textContent = 'window.solana: NOT_FOUND';
-      $('result').textContent = 'NO_SOLANA';
+      el('status').textContent = 'window.solana: NOT_FOUND';
+      el('result').textContent = 'NO_SOLANA';
       return;
     }
-    $('status').textContent = 'window.solana: DETECTED (isPhantom=' + sol.isPhantom + ')';
+    el('status').textContent = 'window.solana: DETECTED (isPhantom=' + sol.isPhantom + ')';
     log('Provider detected');
 
     sleep(1500).then(async function() {
@@ -45,11 +45,11 @@ String get _testDAppDataUri {
       try {
         var r = await sol.connect();
         log('connect OK: ' + r.publicKey.toBase58());
-        $('status').textContent = 'Step1 OK: ' + r.publicKey.toBase58();
-        $('result').textContent = 'CONNECT_OK';
+        el('status').textContent = 'Step1 OK: ' + r.publicKey.toBase58();
+        el('result').textContent = 'CONNECT_OK';
       } catch(e) {
-        $('status').textContent = 'Step1 FAIL: ' + e.message;
-        $('result').textContent = 'CONNECT_FAIL';
+        el('status').textContent = 'Step1 FAIL: ' + e.message;
+        el('result').textContent = 'CONNECT_FAIL';
         return;
       }
 
@@ -60,11 +60,11 @@ String get _testDAppDataUri {
         var msgBytes = new TextEncoder().encode('Hello from Solana Test DApp');
         var sigResult = await sol.signMessage(msgBytes);
         log('signMessage OK, sig length=' + sigResult.signature.length);
-        $('status').textContent = 'Step2 OK: signature=' + Array.from(sigResult.signature).map(function(b) { return ('0' + b.toString(16)).slice(-2); }).join('').slice(0, 32) + '...';
-        $('result').textContent = 'SIGN_MESSAGE_OK';
+        el('status').textContent = 'Step2 OK: signature=' + Array.from(sigResult.signature).map(function(b) { return ('0' + b.toString(16)).slice(-2); }).join('').slice(0, 32) + '...';
+        el('result').textContent = 'SIGN_MESSAGE_OK';
       } catch(e) {
-        $('status').textContent = 'Step2 FAIL: ' + e.message;
-        $('result').textContent = 'SIGN_MESSAGE_FAIL';
+        el('status').textContent = 'Step2 FAIL: ' + e.message;
+        el('result').textContent = 'SIGN_MESSAGE_FAIL';
         return;
       }
 
@@ -90,15 +90,15 @@ String get _testDAppDataUri {
         };
         var signed = await sol.signTransaction(mockTx);
         log('signTransaction OK, signature=' + (signed._sig ? 'present' : 'missing'));
-        $('status').textContent = 'Step3 OK: tx signed';
-        $('result').textContent = 'SIGN_TX_OK';
+        el('status').textContent = 'Step3 OK: tx signed';
+        el('result').textContent = 'SIGN_TX_OK';
       } catch(e) {
-        $('status').textContent = 'Step3 FAIL: ' + e.message;
-        $('result').textContent = 'SIGN_TX_FAIL';
+        el('status').textContent = 'Step3 FAIL: ' + e.message;
+        el('result').textContent = 'SIGN_TX_FAIL';
         return;
       }
 
-      $('result').textContent = 'ALL_OK';
+      el('result').textContent = 'ALL_OK';
     });
   })();
   </script>
@@ -213,12 +213,11 @@ void main() {
       settle: const Duration(seconds: 2),
     );
 
-    // ---- Verify: signTransaction was handled (check via debug log output) ----
-    // We can't directly find text inside the WebView widget. Instead, verify
-    // that no unexpected dialogs remain and the test completed all steps.
-    // The JS-side debug log confirms: connect → signMessage → signTransaction.
-    await tester.pump(const Duration(seconds: 3));
-    // Verify back on dApp browser page (no pending dialog)
-    expect(find.byType(TextField), findsAtLeast(1));
+    // ---- Verify all steps completed ----
+    await pumpUntilVisible(
+      tester,
+      find.text('ALL_OK'),
+      timeout: const Duration(seconds: 10),
+    );
   });
 }
