@@ -2,18 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zero_wallet/src/core/wallet_provider.dart';
 import 'package:zero_wallet/src/models/asset_models.dart';
-import 'package:zero_wallet/src/models/chain_models.dart';
 
 import 'test_helpers.dart';
 
 void main() {
   configureIntegrationTest();
-
-  late List<String> toastMessages;
-
-  setUp(() {
-    toastMessages = [];
-  });
 
   testWidgets('swap history page shows empty state when no swaps exist', (
     tester,

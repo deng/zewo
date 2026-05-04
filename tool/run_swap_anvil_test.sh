@@ -31,6 +31,11 @@ fi
 ANVIL_PORT="${ANVIL_PORT:-8545}"
 ANVIL_RPC_URL="${ANVIL_RPC_URL:-http://127.0.0.1:$ANVIL_PORT}"
 
+# Host-side probe URL — always use localhost since the process runs on the host.
+# $ANVIL_RPC_URL may be set to e.g. http://10.0.2.2:8545 for Android emulator
+# and is only reachable from inside the emulator, not from this host-side script.
+ANVIL_PROBE_URL="http://127.0.0.1:$ANVIL_PORT"
+
 echo "Starting Anvil on port $ANVIL_PORT ..."
 "$ANVIL_BIN" --port "$ANVIL_PORT" --silent &
 ANVIL_PID=$!
@@ -44,12 +49,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Wait for Anvil to be ready (poll eth_chainId).
+# Wait for Anvil to be ready (poll eth_chainId via host probe URL).
 echo "Waiting for Anvil to be ready ..."
 for i in $(seq 1 30); do
   if curl -sf -X POST -H 'Content-Type: application/json' \
     -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' \
-    "$ANVIL_RPC_URL" >/dev/null 2>&1; then
+    "$ANVIL_PROBE_URL" >/dev/null 2>&1; then
     echo "Anvil ready after ${i}s"
     break
   fi
@@ -62,9 +67,10 @@ done
 
 cd "$PROJECT_ROOT"
 echo "Running swap integration test ..."
-exec env \
+env \
   -u http_proxy -u https_proxy \
   flutter test \
     --dart-define=ANVIL_RPC_URL="$ANVIL_RPC_URL" \
     integration_test/swap_anvil_test.dart
-# exec replaces the shell; cleanup runs when flutter exits.
+EXIT_CODE=$?
+exit "$EXIT_CODE"
