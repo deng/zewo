@@ -51,7 +51,6 @@ class AnvilMockDexAggregator implements DexAggregator {
       price: 2800,
       priceImpact: 0.05,
       estimatedGas: '21000',
-      deadlineSec: 30,
     );
   }
 
