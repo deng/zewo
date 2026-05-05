@@ -49,3 +49,4 @@ app.*.map.json
 **/linux/flutter/generated_plugins.cmake
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 **/windows/flutter/generated_plugins.cmake
+.keys
