@@ -6,12 +6,18 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:zero_wallet/wallet.dart';
 
+import 'src/network_setup.dart';
+
 Future<void> main() async {
   await bootstrapZeroWalletApp();
 }
 
 Future<void> bootstrapZeroWalletApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Register network interceptor for hot/cold wallet mode switching.
+  // No-op on web (dart:io not available).
+  await setupNetworkInterceptor();
 
   // 初始化 AppLifecycleManager
   await AppLifecycleManager.instance.initialize();
