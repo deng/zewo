@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -12,6 +13,13 @@ Future<void> main() async {
 
 Future<void> bootstrapZeroWalletApp() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Register network interceptor for hot/cold wallet mode switching.
+  // Await ready so persisted mode is loaded before any network activity.
+  await WalletNetworkManager.instance.ready;
+  HttpOverrides.global = NetworkInterceptor(
+    WalletNetworkManager.instance,
+  );
 
   // 初始化 AppLifecycleManager
   await AppLifecycleManager.instance.initialize();
