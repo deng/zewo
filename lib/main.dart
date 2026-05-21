@@ -187,7 +187,6 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
       walletProvider: _walletProvider,
     );
     _appLockController.addListener(_handleAppLockChanged);
-    AppLifecycleManager.instance.setAppLockController(_appLockController);
     _listenForDeepLinks();
   }
 
