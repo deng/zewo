@@ -433,13 +433,17 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
                 ],
                 builder: (context, child) {
                   final content = child ?? const SizedBox.shrink();
+                  final locked = Listener(
+                    onPointerDown: (_) => _appLockController.resetForegroundTimer(),
+                    child: content,
+                  );
                   return usageSettings.developerMode
                       ? Banner(
                           message: 'DEV',
                           location: BannerLocation.topEnd,
-                          child: content,
+                          child: locked,
                         )
-                      : content;
+                      : locked;
                 },
                 home: const MainPage(),
               );
