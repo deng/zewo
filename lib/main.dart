@@ -54,7 +54,6 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
   StreamSubscription<dynamic>? _deepLinkSubscription;
   String? _consumedInitialDeepLink;
   String? _appliedLocalizationToken;
-  bool _appLockDialogVisible = false;
   int _handledWalletConnectNavigationSerial = 0;
 
   late final ThemeData _lightTheme = _buildTheme(Brightness.light);
@@ -187,7 +186,6 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
       walletProvider: _walletProvider,
       coldStartLockEnabled: false,
     );
-    _appLockController.addListener(_handleAppLockChanged);
     _listenForDeepLinks();
   }
 
@@ -196,7 +194,6 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
     WidgetsBinding.instance.removeObserver(this);
     _deepLinkSubscription?.cancel();
     _walletConnectController.removeListener(_handleWalletConnectChanged);
-    _appLockController.removeListener(_handleAppLockChanged);
     _usageSettingsController.removeListener(_handleUsageSettingsChanged);
     _walletConnectController.dispose();
     _appLockController.dispose();
@@ -222,14 +219,6 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
 
   void _handleUsageSettingsChanged() {
     _syncWalletLocalization(_usageSettingsController.locale);
-  }
-
-  void _handleAppLockChanged() {
-    if (_appLockController.isLocked) {
-      _showAppLockDialogIfNeeded();
-      return;
-    }
-    _dismissAppLockDialogIfNeeded();
   }
 
   Future<void> _listenForDeepLinks() async {
@@ -317,61 +306,6 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
     });
   }
 
-  void _showAppLockDialogIfNeeded() {
-    if (!mounted) {
-      return;
-    }
-    if (_appLockDialogVisible) {
-      return;
-    }
-    final context = _navigatorKey.currentContext;
-    if (context == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-        _showAppLockDialogIfNeeded();
-      });
-      return;
-    }
-
-    _appLockDialogVisible = true;
-    showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      barrierLabel: 'app-lock',
-      barrierColor: Colors.transparent,
-      pageBuilder: (dialogContext, _, __) {
-        return _AppLockDialog(controller: _appLockController);
-      },
-    ).whenComplete(() {
-      if (!mounted) {
-        return;
-      }
-      _appLockDialogVisible = false;
-      if (_appLockController.isLocked) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) {
-            return;
-          }
-          _showAppLockDialogIfNeeded();
-        });
-      }
-    });
-  }
-
-  void _dismissAppLockDialogIfNeeded() {
-    if (!_appLockDialogVisible) {
-      return;
-    }
-    final navigator = _navigatorKey.currentState;
-    if (navigator == null || !navigator.canPop()) {
-      return;
-    }
-    _appLockDialogVisible = false;
-    navigator.pop();
-  }
-
   void _syncWalletLocalization(Locale? locale) {
     final nextToken = _localizationToken(locale);
     if (_appliedLocalizationToken == nextToken) {
@@ -455,199 +389,3 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
   }
 }
 
-class _AppLockDialog extends StatefulWidget {
-  const _AppLockDialog({required this.controller});
-
-  final AppLockController controller;
-
-  @override
-  State<_AppLockDialog> createState() => _AppLockDialogState();
-}
-
-class _AppLockDialogState extends State<_AppLockDialog> {
-  final TextEditingController _passwordController = TextEditingController();
-  bool _passwordVisible = false;
-  String? _validationError;
-  bool _showPasswordMode = false;
-
-  @override
-  void dispose() {
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _unlock() async {
-    final l10n = context.l10n;
-    final password = _passwordController.text;
-    if (password.isEmpty) {
-      setState(() {
-        _validationError = l10n.appLockPasswordRequired;
-      });
-      return;
-    }
-
-    setState(() {
-      _validationError = null;
-    });
-    final unlocked = await widget.controller.unlock(password);
-    if (unlocked) {
-      _passwordController.clear();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final l10n = context.l10n;
-
-    return PopScope(
-      canPop: false,
-      child: ListenableBuilder(
-        listenable: widget.controller,
-        builder: (context, _) {
-          final errorText = _validationError ?? widget.controller.unlockError;
-          final isBusy =
-              widget.controller.isUnlocking ||
-              widget.controller.isUnlockingWithBiometrics;
-          final useBiometricFirst =
-              widget.controller.canUseBiometricUnlock && !_showPasswordMode;
-
-          return Material(
-            color: colorScheme.surface.withValues(alpha: 0.92),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 360),
-                child: Card(
-                  margin: const EdgeInsets.all(24),
-                  color: colorScheme.surfaceContainerHigh,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      key: const Key('app_lock_overlay'),
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.lock_outline,
-                          size: 40,
-                          color: colorScheme.primary,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          l10n.appLockTitle,
-                          key: const Key('app_lock_title'),
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          widget.controller.currentWalletName == null
-                              ? l10n.appLockSubtitle
-                              : '${widget.controller.currentWalletName}\n${l10n.appLockSubtitle}',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
-                        ),
-                        const SizedBox(height: 20),
-
-                        if (useBiometricFirst) ...[
-                          // Biometric-first: large centered biometric button
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              key: const Key('app_lock_biometric_button'),
-                              onPressed: isBusy ? null : _unlockWithBiometrics,
-                              icon: const Icon(Icons.fingerprint, size: 28),
-                              label: Text(
-                                l10n.appLockBiometricUnlock,
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          // Use password link
-                          TextButton(
-                            key: const Key('app_lock_use_password_button'),
-                            onPressed: () {
-                              setState(() => _showPasswordMode = true);
-                            },
-                            child: Text(l10n.appLockUsePassword),
-                          ),
-                        ] else ...[
-                          // Password mode
-                          TextField(
-                            key: const Key('app_lock_password_field'),
-                            controller: _passwordController,
-                            enabled: !isBusy,
-                            obscureText: !_passwordVisible,
-                            onChanged: (_) {
-                              if (_validationError != null) {
-                                setState(() {
-                                  _validationError = null;
-                                });
-                              }
-                              widget.controller.clearUnlockError();
-                            },
-                            decoration: InputDecoration(
-                              labelText: l10n.appLockPasswordLabel,
-                              errorText: errorText,
-                              suffixIcon: IconButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _passwordVisible = !_passwordVisible;
-                                  });
-                                },
-                                icon: Icon(
-                                  _passwordVisible
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              key: const Key('app_lock_unlock_button'),
-                              onPressed: isBusy ? null : _unlock,
-                              child: Text(
-                                widget.controller.isUnlocking
-                                    ? l10n.appLockUnlocking
-                                    : l10n.appLockUnlock,
-                              ),
-                            ),
-                          ),
-                          if (widget.controller.canUseBiometricUnlock) ...[
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                key: const Key('app_lock_biometric_button_alt'),
-                                onPressed: isBusy ? null : _unlockWithBiometrics,
-                                icon: const Icon(Icons.fingerprint),
-                                label: Text(l10n.appLockBiometricUnlock),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Future<void> _unlockWithBiometrics() async {
-    setState(() {
-      _validationError = null;
-    });
-    final unlocked = await widget.controller.unlockWithBiometrics();
-    if (!unlocked && mounted) {
-      setState(() => _showPasswordMode = true);
-    }
-  }
-}
