@@ -467,7 +467,6 @@ class _AppLockDialog extends StatefulWidget {
 class _AppLockDialogState extends State<_AppLockDialog> {
   final TextEditingController _passwordController = TextEditingController();
   bool _passwordVisible = false;
-  bool _didAttemptBiometricUnlock = false;
   String? _validationError;
 
   @override
@@ -509,16 +508,6 @@ class _AppLockDialogState extends State<_AppLockDialog> {
           final isBusy =
               widget.controller.isUnlocking ||
               widget.controller.isUnlockingWithBiometrics;
-
-          if (!_didAttemptBiometricUnlock &&
-              widget.controller.canUseBiometricUnlock) {
-            _didAttemptBiometricUnlock = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && widget.controller.isLocked) {
-                _unlockWithBiometrics();
-              }
-            });
-          }
 
           return Material(
             color: colorScheme.surface.withValues(alpha: 0.92),
