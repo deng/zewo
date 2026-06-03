@@ -184,7 +184,6 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
     _appLockController = AppLockController(
       securitySettingsController: _securitySettingsController,
       walletProvider: _walletProvider,
-      coldStartLockEnabled: false,
     );
     _listenForDeepLinks();
   }
