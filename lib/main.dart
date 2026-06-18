@@ -372,13 +372,14 @@ class _ZeroWalletAppState extends State<ZeroWalletApp>
                     onPointerDown: (_) => _appLockController.resetForegroundTimer(),
                     child: content,
                   );
+                  final wrapped = DappOverlayWrapper(child: locked);
                   return usageSettings.developerMode
                       ? Banner(
                           message: 'DEV',
                           location: BannerLocation.topEnd,
-                          child: locked,
+                          child: wrapped,
                         )
-                      : locked;
+                      : wrapped;
                 },
                 home: const MainPage(),
               );
