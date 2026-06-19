@@ -5,6 +5,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:zero_wallet/wallet.dart';
+// ignore: implementation_imports
+import 'package:zero_wallet/src/eip1193/eip1193_js_provider.dart';
 
 import 'src/network_setup.dart';
 
@@ -18,6 +20,9 @@ Future<void> bootstrapZeroWalletApp() async {
   // Register network interceptor for hot/cold wallet mode switching.
   // No-op on web (dart:io not available).
   await setupNetworkInterceptor();
+
+  // Load the Zero Wallet logo icon for EIP-6963 provider announcements.
+  await Eip1193JsProvider.loadIcon();
 
   // 初始化 AppLifecycleManager
   await AppLifecycleManager.instance.initialize();
